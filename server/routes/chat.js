@@ -214,8 +214,8 @@ router.post('/stream', async (req, res) => {
       send({ type: 'token', content: token });
     }
 
-    // gpt-oss / qwen may stream only into reasoning fields we already parse —
-    // but if the stream still produced nothing, fall back once non-stream.
+    // If the stream yielded no user-visible content tokens, fall back once non-stream.
+    // Reasoning fields are intentionally never shown in the chat UI.
     if (!full && !ac.signal.aborted) {
       console.warn(`[VOID AI] Empty stream from ${usedModel}; trying non-stream fallback…`);
       const fallback = await nonStreamChatCompletion({

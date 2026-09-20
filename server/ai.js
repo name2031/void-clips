@@ -46,6 +46,7 @@ export function buildSystemPrompt({ settings, memories, project, toolsDescriptio
     'Execute clearly requested work without asking permission for tiny steps.',
     'Ask only when critical information is missing.',
     'Never pretend tools succeeded. If a tool is unavailable or stubbed, say so clearly.',
+    'Never narrate your reasoning; answer directly.',
     'If no AI API key is configured on the server, tell the user clearly.',
     personalityMap[settings?.personality] || personalityMap.balanced,
     lengthMap[settings?.response_length] || lengthMap.medium,
@@ -112,44 +113,62 @@ function isModelNotFound(status, text) {
 }
 
 /**
- * Extract visible text from an OpenAI-compatible chat chunk or message.
- * gpt-oss models often stream into delta.reasoning while delta.content stays empty.
+ * Strip common model "thinking" wrappers that sometimes appear inside content.
+ * Safe to run on stream tokens (no-op if tags are incomplete in a single chunk).
+ */
+export function stripThinkTags(text) {
+  if (!text || typeof text !== 'string') return '';
+  let out = text;
+  out = out.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  out = out.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+  out = out.replace(/```(?:thinking|reasoning|thought)[\s\S]*?```/gi, '');
+  out = out.replace(/<\|begin_of_thought\|>[\s\S]*?<\|end_of_thought\|>/gi, '');
+  out = out.replace(/<\|redacted_reasoning\|>[\s\S]*?<\|\/redacted_reasoning\|>/gi, '');
+  if (out !== text) out = out.replace(/^\n+/, '');
+  return out;
+}
+
+function maybeLogReasoning(reasoning) {
+  if (!reasoning || typeof reasoning !== 'string') return;
+  if (!process.env.VOID_LOG_REASONING) return;
+  const snippet = reasoning.length > 240 ? `${reasoning.slice(0, 240)}…` : reasoning;
+  console.log('[VOID AI] model reasoning (hidden from UI):', snippet);
+}
+
+/**
+ * Extract user-visible text from an OpenAI-compatible chat chunk or message.
+ * Prefer delta.content / message.content ONLY — never yield reasoning into the chat UI.
  */
 export function extractChatText(piece) {
   if (!piece || typeof piece !== 'object') return '';
 
-  // Non-stream message or choice.message
-  if (typeof piece.content === 'string' || typeof piece.reasoning === 'string') {
+  // Non-stream message-like object
+  if ('content' in piece || 'reasoning' in piece) {
+    maybeLogReasoning(piece.reasoning);
     const content = typeof piece.content === 'string' ? piece.content : '';
-    const reasoning = typeof piece.reasoning === 'string' ? piece.reasoning : '';
-    if (content && reasoning) return content; // prefer final content when both present
-    return content || reasoning || '';
+    return stripThinkTags(content);
   }
 
   const choice = piece.choices?.[0];
   if (!choice) return '';
 
-  if (typeof choice.text === 'string' && choice.text) return choice.text;
-
   const delta = choice.delta;
   if (delta) {
+    maybeLogReasoning(delta.reasoning);
     const content = typeof delta.content === 'string' ? delta.content : '';
-    const reasoning = typeof delta.reasoning === 'string' ? delta.reasoning : '';
-    // Prefer showing final content; if only reasoning streams, yield that
-    if (content && reasoning) return content;
-    if (content) return content;
-    if (reasoning) return reasoning;
+    return stripThinkTags(content);
   }
 
   const msg = choice.message;
   if (msg) {
+    maybeLogReasoning(msg.reasoning);
     const content = typeof msg.content === 'string' ? msg.content : '';
-    const reasoning = typeof msg.reasoning === 'string' ? msg.reasoning : '';
-    if (content && reasoning) return content;
-    return content || reasoning || '';
+    return stripThinkTags(content);
   }
 
-  if (typeof choice.text === 'string') return choice.text;
+  if (typeof choice.text === 'string' && choice.text) {
+    return stripThinkTags(choice.text);
+  }
   return '';
 }
 
