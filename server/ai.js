@@ -1,5 +1,5 @@
-const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-20b';
-const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+const GROQ_DEFAULT_MODEL = 'qwen/qwen3.6-27b';
+const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'openai/gpt-oss-120b'];
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
 
 export function getAiConfig() {
@@ -73,7 +73,17 @@ export function buildSystemPrompt({ settings, memories, project, toolsDescriptio
   return parts.join('\n\n');
 }
 
-async function requestCompletion(cfg, messages, signal, model) {
+function modelCandidates(cfg) {
+  const candidates = [cfg.model];
+  if (cfg.provider === 'groq') {
+    for (const m of GROQ_FALLBACK_MODELS) {
+      if (!candidates.includes(m)) candidates.push(m);
+    }
+  }
+  return candidates;
+}
+
+async function requestCompletion(cfg, messages, signal, model, { stream }) {
   return fetch(`${cfg.baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -83,7 +93,7 @@ async function requestCompletion(cfg, messages, signal, model) {
     body: JSON.stringify({
       model,
       messages,
-      stream: true,
+      stream,
       temperature: 0.7,
     }),
     signal,
@@ -101,6 +111,48 @@ function isModelNotFound(status, text) {
   );
 }
 
+/**
+ * Extract visible text from an OpenAI-compatible chat chunk or message.
+ * gpt-oss models often stream into delta.reasoning while delta.content stays empty.
+ */
+export function extractChatText(piece) {
+  if (!piece || typeof piece !== 'object') return '';
+
+  // Non-stream message or choice.message
+  if (typeof piece.content === 'string' || typeof piece.reasoning === 'string') {
+    const content = typeof piece.content === 'string' ? piece.content : '';
+    const reasoning = typeof piece.reasoning === 'string' ? piece.reasoning : '';
+    if (content && reasoning) return content; // prefer final content when both present
+    return content || reasoning || '';
+  }
+
+  const choice = piece.choices?.[0];
+  if (!choice) return '';
+
+  if (typeof choice.text === 'string' && choice.text) return choice.text;
+
+  const delta = choice.delta;
+  if (delta) {
+    const content = typeof delta.content === 'string' ? delta.content : '';
+    const reasoning = typeof delta.reasoning === 'string' ? delta.reasoning : '';
+    // Prefer showing final content; if only reasoning streams, yield that
+    if (content && reasoning) return content;
+    if (content) return content;
+    if (reasoning) return reasoning;
+  }
+
+  const msg = choice.message;
+  if (msg) {
+    const content = typeof msg.content === 'string' ? msg.content : '';
+    const reasoning = typeof msg.reasoning === 'string' ? msg.reasoning : '';
+    if (content && reasoning) return content;
+    return content || reasoning || '';
+  }
+
+  if (typeof choice.text === 'string') return choice.text;
+  return '';
+}
+
 export async function streamChatCompletion({ messages, signal }) {
   const cfg = getAiConfig();
   if (!cfg) {
@@ -110,13 +162,48 @@ export async function streamChatCompletion({ messages, signal }) {
   }
 
   const tried = new Set();
-  const candidates = [cfg.model];
-  if (cfg.provider === 'groq') {
-    for (const m of GROQ_FALLBACK_MODELS) {
-      if (!candidates.includes(m)) candidates.push(m);
+  let lastStatus = 0;
+  let lastText = '';
+
+  for (const model of modelCandidates(cfg)) {
+    if (tried.has(model)) continue;
+    tried.add(model);
+
+    const res = await requestCompletion(cfg, messages, signal, model, { stream: true });
+    if (res.ok) return { body: res.body, model, cfg };
+
+    lastText = await res.text().catch(() => '');
+    lastStatus = res.status;
+
+    if (cfg.provider === 'groq' && isModelNotFound(res.status, lastText)) {
+      console.warn(`[VOID AI] Model ${model} unavailable (${res.status}); trying fallback…`);
+      continue;
     }
+
+    const err = new Error(`AI provider error (${res.status}): ${lastText.slice(0, 400)}`);
+    err.code = 'PROVIDER_ERROR';
+    throw err;
   }
 
+  const err = new Error(`AI provider error (${lastStatus}): ${lastText.slice(0, 400)}`);
+  err.code = 'PROVIDER_ERROR';
+  throw err;
+}
+
+/** One-shot non-stream completion (used when SSE yields zero tokens). */
+export async function nonStreamChatCompletion({ messages, signal, preferredModel }) {
+  const cfg = getAiConfig();
+  if (!cfg) {
+    const err = new Error('No AI API key configured. Set OPENAI_API_KEY or GROQ_API_KEY on the server.');
+    err.code = 'NO_API_KEY';
+    throw err;
+  }
+
+  const candidates = preferredModel
+    ? [preferredModel, ...modelCandidates(cfg).filter((m) => m !== preferredModel)]
+    : modelCandidates(cfg);
+
+  const tried = new Set();
   let lastStatus = 0;
   let lastText = '';
 
@@ -124,8 +211,12 @@ export async function streamChatCompletion({ messages, signal }) {
     if (tried.has(model)) continue;
     tried.add(model);
 
-    const res = await requestCompletion(cfg, messages, signal, model);
-    if (res.ok) return res.body;
+    const res = await requestCompletion(cfg, messages, signal, model, { stream: false });
+    if (res.ok) {
+      const json = await res.json();
+      const text = extractChatText(json);
+      return { text: text || '', model };
+    }
 
     lastText = await res.text().catch(() => '');
     lastStatus = res.status;
@@ -164,8 +255,8 @@ export async function* parseSSEStream(body) {
       if (data === '[DONE]') return;
       try {
         const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta?.content;
-        if (delta) yield delta;
+        const piece = extractChatText(json);
+        if (piece) yield piece;
       } catch {
         // ignore partial JSON
       }

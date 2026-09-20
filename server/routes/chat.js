@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
-import { buildSystemPrompt, streamChatCompletion, parseSSEStream, getAiConfig } from '../ai.js';
+import { buildSystemPrompt, streamChatCompletion, parseSSEStream, getAiConfig, nonStreamChatCompletion } from '../ai.js';
 import { toolsDescription, detectToolHints, runTool, listTools } from '../tools/index.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -186,11 +186,28 @@ router.post('/stream', async (req, res) => {
   req.on('close', () => ac.abort());
 
   let full = '';
+  let usedModel = null;
   try {
-    const body = await streamChatCompletion({ messages, signal: ac.signal });
+    const { body, model } = await streamChatCompletion({ messages, signal: ac.signal });
+    usedModel = model;
     for await (const token of parseSSEStream(body)) {
       full += token;
       send({ type: 'token', content: token });
+    }
+
+    // gpt-oss and similar models may stream only into reasoning fields we already
+    // parse — but if the stream still produced nothing, fall back once non-stream.
+    if (!full && !ac.signal.aborted) {
+      console.warn(`[VOID AI] Empty stream from ${usedModel}; trying non-stream fallback…`);
+      const fallback = await nonStreamChatCompletion({
+        messages,
+        signal: ac.signal,
+        preferredModel: usedModel,
+      });
+      if (fallback.text) {
+        full = fallback.text;
+        send({ type: 'token', content: full });
+      }
     }
   } catch (e) {
     if (e.name === 'AbortError') {

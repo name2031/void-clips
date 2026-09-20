@@ -39,7 +39,7 @@ Open http://localhost:5173 (dev) or http://localhost:8787 (production build).
 | `OPENAI_API_KEY` | one of keys | OpenAI (or compatible) API key |
 | `GROQ_API_KEY` | one of keys | Groq API key (used if OpenAI key unset) |
 | `OPENAI_BASE_URL` | no | Override API base (default OpenAI or Groq) |
-| `OPENAI_MODEL` | no | Model id. OpenAI default `gpt-4o-mini`. Groq default `openai/gpt-oss-20b` (on 404 retries `qwen/qwen3.6-27b`) |
+| `OPENAI_MODEL` | no | Model id. OpenAI default `gpt-4o-mini`. Groq default `qwen/qwen3.6-27b` (on 404 retries `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`, `openai/gpt-oss-120b`) |
 | `PUBLIC_BASE` | no | Public https URL — enables `Secure` cookies when set to `https://…` |
 | `PORT` | no | Default `8787` |
 | `HOST` | no | Default `0.0.0.0` |
@@ -53,7 +53,7 @@ Open http://localhost:5173 (dev) or http://localhost:8787 (production build).
 npm run build && node server/index.js
 ```
 
-Dockerfile builds the Vite app then starts Express. Set `OPENAI_API_KEY` or `GROQ_API_KEY` in the Railway dashboard. Prefer `OPENAI_MODEL=openai/gpt-oss-20b` with Groq. Persist `/app/data` and `/app/uploads` with a volume if you need durable storage.
+Dockerfile builds the Vite app then starts Express. Set `OPENAI_API_KEY` or `GROQ_API_KEY` in the Railway dashboard. Groq default is `qwen/qwen3.6-27b` (no `OPENAI_MODEL` required); gpt-oss streams are parsed from `delta.reasoning`/`content` with a non-stream fallback if empty. Persist `/app/data` and `/app/uploads` with a volume if you need durable storage.
 
 ## API (auth via httpOnly cookie or `Authorization: Bearer`)
 
