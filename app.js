@@ -269,6 +269,10 @@
   var STATS_KEY = "void_clips_stats"; /* { gens } local counter */
   var DEMO_FLAG_KEY = "void_clips_allow_demo_verify";
   var API_SECRET_KEY = "void_clips_api_secret"; /* optional: paste VOID_API_SECRET for /api calls */
+  var ANNOUNCE_KEY = "void_clips_announce";
+  var ANNOUNCE_DISMISS_KEY = "void_clips_announce_dismissed";
+  var FEATURE_FLAGS_KEY = "void_clips_feature_flags";
+  var SITE_CONFIG_CACHE_KEY = "void_clips_site_config_cache";
   var MAX_HISTORY = 5;
   var FREE_CREDITS = 10;
   var OWNER_EMAIL = "yuel.zeru2000@gmail.com";
@@ -406,6 +410,28 @@
   var swishPendingList = document.getElementById("swish-pending-list");
   var swishPendingRefresh = document.getElementById("swish-pending-refresh");
   var swishPendingCount = document.getElementById("swish-pending-count");
+  var announceBanner = document.getElementById("announce-banner");
+  var announceBannerText = document.getElementById("announce-banner-text");
+  var announceBannerDismiss = document.getElementById("announce-banner-dismiss");
+  var announceForm = document.getElementById("announce-form");
+  var announceInput = document.getElementById("announce-input");
+  var announceClearBtn = document.getElementById("announce-clear-btn");
+  var flagBatchToggle = document.getElementById("flag-batch-toggle");
+  var flagBatchStatus = document.getElementById("flag-batch-status");
+  var flagLabsToggle = document.getElementById("flag-labs-toggle");
+  var flagLabsStatus = document.getElementById("flag-labs-status");
+  var flagSignupsToggle = document.getElementById("flag-signups-toggle");
+  var flagSignupsStatus = document.getElementById("flag-signups-status");
+  var proGrantForm = document.getElementById("pro-grant-form");
+  var proGrantEmail = document.getElementById("pro-grant-email");
+  var proGrantDays = document.getElementById("pro-grant-days");
+  var proRevokeBtn = document.getElementById("pro-revoke-btn");
+  var forceCreditsForm = document.getElementById("force-credits-form");
+  var forceCreditsEmail = document.getElementById("force-credits-email");
+  var forceCreditsValue = document.getElementById("force-credits-value");
+  var lookupForm = document.getElementById("lookup-form");
+  var lookupEmail = document.getElementById("lookup-email");
+  var lookupResult = document.getElementById("lookup-result");
   var launchPromoBanner = document.getElementById("launch-promo-banner");
   var paymentsStatusEl = document.getElementById("payments-status");
   var pricingPromoEnds = document.getElementById("pricing-promo-ends");
@@ -481,6 +507,178 @@
 
   function isOwner() {
     return !!(currentUser && currentUser.verified && isOwnerEmail(currentUser.email || currentUser.identity));
+  }
+
+  function syncOwnerVisibility() {
+    var owner = isOwner();
+    try {
+      document.body.classList.toggle("is-owner", owner);
+    } catch (e) {}
+    if (navOwnerBadge) navOwnerBadge.hidden = !owner;
+    if (ownerAdminPanel) ownerAdminPanel.hidden = !owner;
+    if (ownerPanelBtn) ownerPanelBtn.hidden = !owner;
+    if (!owner) {
+      if (ownerPanel) ownerPanel.hidden = true;
+    }
+  }
+
+  function defaultFeatureFlags() {
+    return { batch: true, labs: true, signups: true };
+  }
+
+  function loadFeatureFlags() {
+    try {
+      var raw = localStorage.getItem(FEATURE_FLAGS_KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (o && typeof o === "object") {
+          return {
+            batch: o.batch !== false,
+            labs: o.labs !== false,
+            signups: o.signups !== false,
+          };
+        }
+      }
+    } catch (e) {}
+    return defaultFeatureFlags();
+  }
+
+  function saveFeatureFlags(flags) {
+    flags = flags || defaultFeatureFlags();
+    try {
+      localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(flags));
+    } catch (e) {}
+    return flags;
+  }
+
+  function applyFeatureFlagsUI() {
+    var flags = loadFeatureFlags();
+    try {
+      document.body.classList.toggle("flag-batch-off", !flags.batch && !isOwner());
+      document.body.classList.toggle("flag-labs-off", !flags.labs && !isOwner());
+    } catch (e) {}
+    function syncToggle(btn, statusEl, on) {
+      if (btn) {
+        btn.setAttribute("aria-checked", on ? "true" : "false");
+        btn.classList.toggle("is-on", on);
+      }
+      if (statusEl) statusEl.textContent = on ? "On" : "Off";
+    }
+    syncToggle(flagBatchToggle, flagBatchStatus, flags.batch);
+    syncToggle(flagLabsToggle, flagLabsStatus, flags.labs);
+    syncToggle(flagSignupsToggle, flagSignupsStatus, flags.signups);
+  }
+
+  function setFeatureFlag(key, on) {
+    if (!isOwner()) return;
+    var flags = loadFeatureFlags();
+    flags[key] = !!on;
+    saveFeatureFlags(flags);
+    applyFeatureFlagsUI();
+    pushSiteConfig({ flags: flags });
+  }
+
+  function getAnnounceMessage() {
+    try {
+      return String(localStorage.getItem(ANNOUNCE_KEY) || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function setAnnounceMessage(msg) {
+    msg = String(msg || "").trim().slice(0, 280);
+    try {
+      if (msg) localStorage.setItem(ANNOUNCE_KEY, msg);
+      else localStorage.removeItem(ANNOUNCE_KEY);
+      localStorage.removeItem(ANNOUNCE_DISMISS_KEY);
+    } catch (e) {}
+    applyAnnounceBanner();
+    return msg;
+  }
+
+  function applyAnnounceBanner() {
+    if (!announceBanner) return;
+    var msg = getAnnounceMessage();
+    if (!msg) {
+      announceBanner.hidden = true;
+      return;
+    }
+    try {
+      if (localStorage.getItem(ANNOUNCE_DISMISS_KEY) === msg) {
+        announceBanner.hidden = true;
+        return;
+      }
+    } catch (e) {}
+    if (announceBannerText) announceBannerText.textContent = msg;
+    if (announceInput && isOwner()) announceInput.value = msg;
+    announceBanner.hidden = false;
+  }
+
+  function pushSiteConfig(patch) {
+    if (!isOwner()) return Promise.resolve(null);
+    var body = patch || {};
+    if (body.maintenance === undefined) body.maintenance = isMaintenanceOn();
+    if (body.announce === undefined) body.announce = getAnnounceMessage();
+    if (!body.flags) body.flags = loadFeatureFlags();
+    return fetch("/api/owner/site-config", {
+      method: "POST",
+      headers: ownerApiHeaders(),
+      body: JSON.stringify(body),
+    })
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (data) {
+        if (data && data.ok) applyRemoteSiteConfig(data, true);
+        return data;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function applyRemoteSiteConfig(data, fromOwnerPush) {
+    if (!data || !data.ok) return;
+    try {
+      localStorage.setItem(SITE_CONFIG_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {}
+    if (typeof data.announce === "string") {
+      try {
+        if (data.announce) localStorage.setItem(ANNOUNCE_KEY, data.announce);
+        else localStorage.removeItem(ANNOUNCE_KEY);
+      } catch (e2) {}
+    }
+    if (data.flags) saveFeatureFlags(data.flags);
+    if (typeof data.maintenance === "boolean") {
+      try {
+        localStorage.setItem(MAINTENANCE_KEY, data.maintenance ? "1" : "0");
+      } catch (e3) {}
+    }
+    applyAnnounceBanner();
+    applyFeatureFlagsUI();
+    if (!fromOwnerPush) applyMaintenanceUI();
+    else syncOwnerAdminPanel();
+  }
+
+  function fetchSiteConfig() {
+    return fetch("/api/site-config")
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (data) {
+        if (data && data.ok) applyRemoteSiteConfig(data, false);
+        return data;
+      })
+      .catch(function () {
+        applyAnnounceBanner();
+        applyFeatureFlagsUI();
+        return null;
+      });
   }
 
   function bytesToHex(buf) {
@@ -839,6 +1037,77 @@
     }
   }
 
+  function revokeProLocal(email) {
+    email = normalizeEmail(email);
+    setEntitlement(email, { unlimited: false, proUntil: 0, source: "owner-revoke" });
+    if (currentUser && normalizeEmail(currentUser.email) === email) {
+      currentUser.unlimited = false;
+      currentUser.pro = false;
+      currentUser.proUntil = 0;
+      var acct = getAccount(email);
+      currentUser.credits = acct && typeof acct.credits === "number" ? acct.credits : FREE_CREDITS;
+      saveUser(currentUser);
+      updateCreditsUI();
+    }
+  }
+
+  function setCreditsExact(email, n) {
+    email = normalizeEmail(email);
+    n = Math.max(0, Math.min(9999, Number(n) || 0));
+    var acct = getAccount(email);
+    if (!acct) {
+      acct = {
+        email: email,
+        salt: randomHex(16),
+        passwordHash: "",
+        verified: false,
+        credits: n,
+        createdAt: Date.now(),
+        placeholder: true,
+      };
+    } else {
+      acct.credits = n;
+    }
+    upsertAccount(acct);
+    /* Force free-tier credits: clear unlimited if setting a finite pool */
+    var ent = getEntitlement(email);
+    if (ent.unlimited) {
+      setEntitlement(email, { unlimited: false, proUntil: ent.proUntil || 0, source: ent.source || "owner-force-credits" });
+    }
+    if (currentUser && normalizeEmail(currentUser.email) === email) {
+      currentUser.unlimited = false;
+      if (!(currentUser.proUntil && Date.now() < currentUser.proUntil)) {
+        currentUser.pro = false;
+        currentUser.credits = n;
+      }
+      saveUser(currentUser);
+      updateCreditsUI();
+    }
+    return n;
+  }
+
+  function ownerGrantPro(email, days) {
+    email = normalizeEmail(email);
+    days = Math.max(1, Math.min(3650, Number(days) || 30));
+    var until = activatePro(email, days, "owner-grant");
+    fetch("/api/owner/grant-pro", {
+      method: "POST",
+      headers: ownerApiHeaders(),
+      body: JSON.stringify({ email: email, days: days }),
+    }).catch(function () {});
+    return until;
+  }
+
+  function ownerRevokePro(email) {
+    email = normalizeEmail(email);
+    revokeProLocal(email);
+    fetch("/api/owner/revoke-pro", {
+      method: "POST",
+      headers: ownerApiHeaders(),
+      body: JSON.stringify({ email: email }),
+    }).catch(function () {});
+  }
+
   function addCreditsToEmail(email, n) {
     email = normalizeEmail(email);
     n = Math.max(0, Number(n) || 0);
@@ -987,6 +1256,7 @@
     } catch (e) {}
     applyMaintenanceUI();
     syncOwnerAdminPanel();
+    if (isOwner()) pushSiteConfig({ maintenance: !!on });
   }
 
   function applyMaintenanceUI() {
@@ -1014,8 +1284,8 @@
       if (ownerPanel) ownerPanel.hidden = true;
       if (navCredits) navCredits.hidden = true;
       if (navUser) navUser.hidden = true;
-      if (navOwnerBadge) navOwnerBadge.hidden = true;
       if (navProBadge) navProBadge.hidden = true;
+      syncOwnerVisibility();
       return;
     }
 
@@ -1046,10 +1316,9 @@
     if (!currentUser || !currentUser.verified) {
       if (navCredits) navCredits.hidden = true;
       if (navUser) navUser.hidden = true;
-      if (navOwnerBadge) navOwnerBadge.hidden = true;
       if (navProBadge) navProBadge.hidden = true;
-      if (ownerAdminPanel) ownerAdminPanel.hidden = true;
-      if (ownerPanelBtn) ownerPanelBtn.hidden = true;
+      syncOwnerVisibility();
+      applyFeatureFlagsUI();
       return;
     }
     /* refresh entitlement flags */
@@ -1071,10 +1340,9 @@
     }
     if (navUser) navUser.hidden = false;
     if (userNameEl) userNameEl.textContent = displayName(currentUser.email || currentUser.identity);
-    if (navOwnerBadge) navOwnerBadge.hidden = !owner;
     if (navProBadge) navProBadge.hidden = owner || !pro;
-    if (ownerAdminPanel) ownerAdminPanel.hidden = !owner;
-    if (ownerPanelBtn) ownerPanelBtn.hidden = !owner;
+    syncOwnerVisibility();
+    applyFeatureFlagsUI();
 
     var out = !owner && !pro && currentUser.credits <= 0;
     if (upgradeCta) upgradeCta.hidden = !out;
@@ -1114,8 +1382,8 @@
     if (appMain) appMain.hidden = true;
     if (navCredits) navCredits.hidden = true;
     if (navUser) navUser.hidden = true;
-    if (navOwnerBadge) navOwnerBadge.hidden = true;
     if (navProBadge) navProBadge.hidden = true;
+    syncOwnerVisibility();
     if (onboardingModal) onboardingModal.hidden = true;
     showSignInPanel();
     if (authIdentity) {
@@ -1570,6 +1838,11 @@
     var confirmPw = confirmEl ? String(confirmEl.value || "") : "";
 
     if (authMode === "signup") {
+      var flagsNow = loadFeatureFlags();
+      if (!flagsNow.signups && !isOwnerEmail(email)) {
+        setAuthError("New signups are temporarily closed — try Sign in or check back later");
+        return Promise.resolve();
+      }
       if (usable) {
         setAuthError("Account already exists — switch to Sign in" + (isOwnerEmail(email) ? " (or Forgot password)" : ""));
         return Promise.resolve();
@@ -2023,13 +2296,11 @@
     if (upgradeCta) upgradeCta.hidden = true;
     lastClips = [];
     setEmptyVisible(true);
-    if (navOwnerBadge) navOwnerBadge.hidden = true;
     if (navProBadge) navProBadge.hidden = true;
-    if (ownerAdminPanel) ownerAdminPanel.hidden = true;
-    if (ownerPanelBtn) ownerPanelBtn.hidden = true;
-    if (ownerPanel) ownerPanel.hidden = true;
+    syncOwnerVisibility();
     showAuthGate();
     applyMaintenanceUI();
+    applyFeatureFlagsUI();
     showToast("Signed out");
   }
 
@@ -2481,8 +2752,7 @@
   }
 
   function syncOwnerAdminPanel() {
-    if (ownerAdminPanel) ownerAdminPanel.hidden = !isOwner();
-    if (ownerPanelBtn) ownerPanelBtn.hidden = !isOwner();
+    syncOwnerVisibility();
     var on = isMaintenanceOn();
     if (maintenanceToggle) {
       maintenanceToggle.setAttribute("aria-checked", on ? "true" : "false");
@@ -2496,6 +2766,8 @@
       ownerMaintToggle.classList.toggle("is-on", on);
     }
     if (ownerMaintStatus) ownerMaintStatus.textContent = on ? "On" : "Off";
+    applyFeatureFlagsUI();
+    applyAnnounceBanner();
   }
 
   function formatExpiry(ts) {
@@ -2537,7 +2809,7 @@
             ? ""
             : '<button type="button" class="btn btn-ghost btn-sm gift-revoke" data-code="' +
               escapeHtml(c.code) +
-              '">Revoke</button>') +
+              '">Disable</button>') +
           "</div>"
         );
       })
@@ -2575,6 +2847,7 @@
   }
 
   function refreshOwnerStats() {
+    if (!isOwner()) return;
     var users = loadUsersMap();
     var emails = Object.keys(users);
     var verified = emails.filter(function (e) {
@@ -2585,7 +2858,8 @@
       var x = ents[e];
       return x && (x.unlimited || (x.proUntil && x.proUntil > Date.now()));
     }).length;
-    var codes = loadGiftCodes().filter(function (c) {
+    var allCodes = loadGiftCodes();
+    var codes = allCodes.filter(function (c) {
       return !c.revoked && c.redemptions < c.maxRedemptions;
     }).length;
     var el = function (id, v) {
@@ -2597,13 +2871,27 @@
     el("stat-gens", getStatGens());
     el("stat-waitlist", getWaitlist().length);
     el("stat-codes", codes);
+    el("stat-codes-issued", allCodes.length);
     el("stat-pro", proN);
     el("stat-bugs", loadBugReports().length);
+    fetch("/api/owner/stats", { headers: ownerApiHeaders() })
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        if (typeof data.pendingSwish === "number") el("stat-swish", data.pendingSwish);
+        if (typeof data.activeProGrants === "number") el("stat-pro-server", data.activeProGrants);
+      })
+      .catch(function () {});
   }
 
   function openOwnerPanel() {
     if (!isOwner()) {
       showToast("Owner only");
+      syncOwnerVisibility();
       return;
     }
     if (settingsModal) closeModal(settingsModal);
@@ -2615,6 +2903,7 @@
     renderOwnerBugReports();
     refreshOwnerStats();
     loadSwishPending();
+    if (announceInput) announceInput.value = getAnnounceMessage();
   }
 
   function closeOwnerPanel() {
@@ -3273,6 +3562,156 @@
       grantUnlimited(email);
       showToast("Unlimited granted to " + normalizeEmail(email));
       refreshOwnerStats();
+    });
+  }
+
+  if (announceForm) {
+    announceForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!isOwner()) return;
+      var msg = setAnnounceMessage(announceInput && announceInput.value);
+      pushSiteConfig({ announce: msg });
+      showToast(msg ? "Announce set" : "Announce cleared");
+    });
+  }
+  if (announceClearBtn) {
+    announceClearBtn.addEventListener("click", function () {
+      if (!isOwner()) return;
+      setAnnounceMessage("");
+      if (announceInput) announceInput.value = "";
+      pushSiteConfig({ announce: "" });
+      showToast("Announce cleared");
+    });
+  }
+  if (announceBannerDismiss) {
+    announceBannerDismiss.addEventListener("click", function () {
+      var msg = getAnnounceMessage();
+      try {
+        if (msg) localStorage.setItem(ANNOUNCE_DISMISS_KEY, msg);
+      } catch (e) {}
+      if (announceBanner) announceBanner.hidden = true;
+    });
+  }
+
+  function wireFlagToggle(btn, key) {
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      if (!isOwner()) {
+        showToast("Owner only");
+        return;
+      }
+      var flags = loadFeatureFlags();
+      var next = !flags[key];
+      if (key === "signups" && !next && !confirm("Turn OFF new signups? Existing users can still sign in.")) return;
+      setFeatureFlag(key, next);
+      showToast((key === "batch" ? "Batch" : key === "labs" ? "Labs" : "Signups") + (next ? " ON" : " OFF"));
+    });
+  }
+  wireFlagToggle(flagBatchToggle, "batch");
+  wireFlagToggle(flagLabsToggle, "labs");
+  wireFlagToggle(flagSignupsToggle, "signups");
+
+  if (proGrantForm) {
+    proGrantForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!isOwner()) return;
+      var email = proGrantEmail && proGrantEmail.value;
+      var days = proGrantDays && proGrantDays.value;
+      if (!email) {
+        showToast("Enter an email");
+        return;
+      }
+      var until = ownerGrantPro(email, days);
+      showToast("Pro granted → " + normalizeEmail(email) + " until " + formatExpiry(until));
+      refreshOwnerStats();
+    });
+  }
+  if (proRevokeBtn) {
+    proRevokeBtn.addEventListener("click", function () {
+      if (!isOwner()) return;
+      var email = proGrantEmail && proGrantEmail.value;
+      if (!email) {
+        showToast("Enter an email");
+        return;
+      }
+      if (!confirm("Revoke Pro for " + normalizeEmail(email) + "?")) return;
+      ownerRevokePro(email);
+      showToast("Pro revoked for " + normalizeEmail(email));
+      refreshOwnerStats();
+    });
+  }
+
+  if (forceCreditsForm) {
+    forceCreditsForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!isOwner()) return;
+      var email = forceCreditsEmail && forceCreditsEmail.value;
+      var n = forceCreditsValue && forceCreditsValue.value;
+      if (!email) {
+        showToast("Enter an email");
+        return;
+      }
+      var total = setCreditsExact(email, n);
+      showToast("Credits set → " + normalizeEmail(email) + " = " + total);
+      refreshOwnerStats();
+    });
+  }
+
+  if (lookupForm) {
+    lookupForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!isOwner()) return;
+      var email = normalizeEmail(lookupEmail && lookupEmail.value);
+      if (!email || email.indexOf("@") === -1) {
+        showToast("Valid email required");
+        return;
+      }
+      var acct = getAccount(email);
+      var ent = getEntitlement(email);
+      var localPro = !!(ent.unlimited || (ent.proUntil && ent.proUntil > Date.now()));
+      var lines = [
+        "email: " + email,
+        "local account: " + (acct ? "yes" : "no"),
+        "verified: " + (acct && acct.verified ? "yes" : "no"),
+        "credits: " + (acct && typeof acct.credits === "number" ? acct.credits : "—"),
+        "local Pro: " + (localPro ? "yes" : "no"),
+        "local unlimited: " + (ent.unlimited ? "yes" : "no"),
+        "local proUntil: " + (ent.proUntil ? formatExpiry(ent.proUntil) : "—"),
+        "local source: " + (ent.source || "—"),
+        "server: looking up…",
+      ];
+      if (lookupResult) {
+        lookupResult.hidden = false;
+        lookupResult.textContent = lines.join("\n");
+      }
+      fetch("/api/owner/lookup?email=" + encodeURIComponent(email), { headers: ownerApiHeaders() })
+        .then(function (r) {
+          return r.json().catch(function () {
+            return {};
+          });
+        })
+        .then(function (data) {
+          if (!lookupResult) return;
+          if (data && data.ok) {
+            lines[lines.length - 1] =
+              "server Pro: " +
+              (data.pro ? "yes" : "no") +
+              " · until " +
+              (data.proUntil ? formatExpiry(data.proUntil) : "—") +
+              " · plan " +
+              (data.plan || "—") +
+              " · source " +
+              (data.source || "—");
+          } else {
+            lines[lines.length - 1] = "server: unavailable (" + ((data && data.error) || "no response") + ")";
+          }
+          lookupResult.textContent = lines.join("\n");
+        })
+        .catch(function () {
+          if (!lookupResult) return;
+          lines[lines.length - 1] = "server: unreachable";
+          lookupResult.textContent = lines.join("\n");
+        });
     });
   }
 
@@ -5803,6 +6242,10 @@
     bindOpen("open-favorites-btn-top", "favorites-drawer", renderFavoritesDrawer);
     bindOpen("open-voice-btn", "voice-drawer", syncVoiceForm);
     bindOpen("open-labs-btn", null, function () {
+      if (!loadFeatureFlags().labs && !isOwner()) {
+        showToast("Labs is temporarily off");
+        return;
+      }
       var labs = document.getElementById("void-labs");
       if (labs) {
         labs.hidden = false;
@@ -5810,6 +6253,10 @@
       } else showToast("Generate first to unlock Labs");
     });
     bindOpen("open-labs-btn-top", null, function () {
+      if (!loadFeatureFlags().labs && !isOwner()) {
+        showToast("Labs is temporarily off");
+        return;
+      }
       var labs = document.getElementById("void-labs");
       if (labs && !labs.hidden) labs.scrollIntoView({ behavior: "smooth", block: "start" });
       else if (lastClips.length) {
@@ -5853,6 +6300,10 @@
     var batchGenBtn = document.getElementById("batch-generate-btn");
     if (batchToggle) {
       batchToggle.addEventListener("click", function () {
+        if (!loadFeatureFlags().batch && !isOwner()) {
+          showToast("Batch is temporarily off");
+          return;
+        }
         state.batchMode = !state.batchMode;
         batchToggle.setAttribute("aria-pressed", state.batchMode ? "true" : "false");
         batchToggle.classList.toggle("is-on", state.batchMode);
@@ -5931,9 +6382,13 @@
   setEmptyVisible(true);
   updatePasteDetect();
   initBetaBanner();
+  applyAnnounceBanner();
+  applyFeatureFlagsUI();
+  syncOwnerVisibility();
 
   fetchPricing();
   handleCheckoutReturn();
+  fetchSiteConfig();
 
   currentUser = loadUser();
   if (isMaintenanceOn() && !isOwner()) {

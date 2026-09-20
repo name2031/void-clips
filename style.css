@@ -2595,7 +2595,70 @@ body.void-mode-on .clip-card.has-resonance-emphasis {
 
 
 /* —— Owner / maintenance / auth security —— */
+/* Author display:flex/inline-flex must not override HTML [hidden] */
+.nav-credits[hidden],
+.nav-user[hidden],
+.nav-pro-badge[hidden],
+.nav-owner-badge[hidden],
+#owner-panel-btn[hidden],
+#owner-admin-panel[hidden],
+.settings-owner[hidden],
+.owner-only[hidden] {
+  display: none !important;
+}
+
+/* Belt-and-suspenders: never paint owner UI unless body.is-owner */
+body:not(.is-owner) .owner-only {
+  display: none !important;
+}
+
 .nav-owner-badge { display: flex; align-items: center; }
+.nav-pro-badge { display: flex; align-items: center; }
+
+.announce-banner {
+  position: relative;
+  z-index: 40;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.22), rgba(167, 139, 250, 0.12));
+  border-bottom: 1px solid rgba(167, 139, 250, 0.35);
+  padding: 0.55rem 0;
+}
+.announce-banner[hidden] { display: none !important; }
+.announce-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.announce-banner-text {
+  font-size: 0.82rem;
+  color: #e9d5ff;
+  line-height: 1.4;
+}
+.owner-lookup-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius);
+  background: rgba(10, 10, 14, 0.85);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+}
+.owner-lookup-result[hidden] { display: none !important; }
+body.flag-batch-off #batch-toggle,
+body.flag-batch-off #batch-url-row,
+body.flag-batch-off #batch-groups {
+  display: none !important;
+}
+body.flag-labs-off #open-labs-btn,
+body.flag-labs-off #open-labs-btn-top,
+body.flag-labs-off #void-labs {
+  display: none !important;
+}
 
 .owner-badge {
   display: inline-flex;

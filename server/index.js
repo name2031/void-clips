@@ -56,6 +56,7 @@ var PUBLIC_MODE =
 var OWNER_EMAIL = String(process.env.OWNER_EMAIL || "yuel.zeru2000@gmail.com").trim().toLowerCase();
 var SWISH_NUMBER_RAW = String(process.env.SWISH_NUMBER || "+46765875459").trim();
 var SWISH_PENDING_FILE = path.join(DATA_DIR, "swish-pending.json");
+var SITE_CONFIG_FILE = path.join(DATA_DIR, "site-config.json");
 
 /* Normal EUR prices (cents). Launch promo cheaper for first 30 days. */
 var PRICE_NORMAL = { monthly: 999, yearly: 7900, currency: "eur" };
@@ -210,6 +211,83 @@ function grantPro(email, plan, sessionId, amount, currency, source) {
   };
   persistGrants();
   return grants[email];
+}
+
+function grantProDays(email, days, source) {
+  email = normalizeEmail(email);
+  days = Math.max(1, Math.min(3650, Number(days) || 30));
+  var prev = grants[email];
+  var base = prev && prev.proUntil && prev.proUntil > Date.now() ? prev.proUntil : Date.now();
+  var until = base + days * 24 * 60 * 60 * 1000;
+  grants[email] = {
+    email: email,
+    plan: days >= 365 ? "yearly" : "monthly",
+    proUntil: until,
+    sessionId: "",
+    amount: 0,
+    currency: "eur",
+    source: source || "owner",
+    updatedAt: Date.now(),
+  };
+  persistGrants();
+  return grants[email];
+}
+
+function revokePro(email) {
+  email = normalizeEmail(email);
+  if (!grants[email]) return null;
+  delete grants[email];
+  persistGrants();
+  return true;
+}
+
+/* —— Site config (announce / flags / maintenance) —— */
+var siteConfig = {
+  maintenance: false,
+  announce: "",
+  flags: { batch: true, labs: true, signups: true },
+};
+
+function loadSiteConfig() {
+  try {
+    if (!fs.existsSync(SITE_CONFIG_FILE)) return;
+    var raw = fs.readFileSync(SITE_CONFIG_FILE, "utf8");
+    var obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return;
+    if (typeof obj.maintenance === "boolean") siteConfig.maintenance = obj.maintenance;
+    if (typeof obj.announce === "string") siteConfig.announce = obj.announce.slice(0, 280);
+    if (obj.flags && typeof obj.flags === "object") {
+      siteConfig.flags = {
+        batch: obj.flags.batch !== false,
+        labs: obj.flags.labs !== false,
+        signups: obj.flags.signups !== false,
+      };
+    }
+  } catch (e) {
+    console.warn("[void-clips] could not load site config:", e.message);
+  }
+}
+
+function persistSiteConfig() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(SITE_CONFIG_FILE, JSON.stringify(siteConfig, null, 2));
+  } catch (e) {
+    console.warn("[void-clips] could not persist site config:", e.message);
+  }
+}
+
+function publicSiteConfig() {
+  return {
+    ok: true,
+    maintenance: !!siteConfig.maintenance,
+    announce: String(siteConfig.announce || ""),
+    flags: {
+      batch: siteConfig.flags.batch !== false,
+      labs: siteConfig.flags.labs !== false,
+      signups: siteConfig.flags.signups !== false,
+    },
+  };
 }
 
 /* —— Manual Swish (no Företag API) —— */
@@ -564,6 +642,7 @@ async function sendViaResend(email, code) {
 loadStore();
 loadGrants();
 loadSwishPending();
+loadSiteConfig();
 
 var app = express();
 app.use(cors({ origin: true }));
@@ -1005,6 +1084,109 @@ app.post("/api/swish/reject", requireOwner, function (req, res) {
   } catch (e) {
     console.error("[swish/reject]", e.message || e);
     return res.status(500).json({ ok: false, error: "Could not reject" });
+  }
+});
+
+/* —— Public site config (announce / flags / maintenance) —— */
+app.get("/api/site-config", function (_req, res) {
+  res.json(publicSiteConfig());
+});
+
+app.post("/api/owner/site-config", requireOwner, function (req, res) {
+  try {
+    var body = req.body || {};
+    if (typeof body.maintenance === "boolean") siteConfig.maintenance = body.maintenance;
+    if (typeof body.announce === "string") siteConfig.announce = body.announce.slice(0, 280);
+    if (body.flags && typeof body.flags === "object") {
+      if (typeof body.flags.batch === "boolean") siteConfig.flags.batch = body.flags.batch;
+      if (typeof body.flags.labs === "boolean") siteConfig.flags.labs = body.flags.labs;
+      if (typeof body.flags.signups === "boolean") siteConfig.flags.signups = body.flags.signups;
+    }
+    persistSiteConfig();
+    return res.json(publicSiteConfig());
+  } catch (e) {
+    console.error("[owner/site-config]", e.message || e);
+    return res.status(500).json({ ok: false, error: "Could not save site config" });
+  }
+});
+
+app.post("/api/owner/grant-pro", requireOwner, function (req, res) {
+  try {
+    var email = normalizeEmail(req.body && req.body.email);
+    var days = Number(req.body && req.body.days) || 30;
+    if (!isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "Valid email required" });
+    }
+    var g = grantProDays(email, days, "owner");
+    return res.json({
+      ok: true,
+      email: email,
+      pro: true,
+      proUntil: g.proUntil,
+      plan: g.plan,
+      source: g.source,
+    });
+  } catch (e) {
+    console.error("[owner/grant-pro]", e.message || e);
+    return res.status(500).json({ ok: false, error: "Could not grant Pro" });
+  }
+});
+
+app.post("/api/owner/revoke-pro", requireOwner, function (req, res) {
+  try {
+    var email = normalizeEmail(req.body && req.body.email);
+    if (!isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "Valid email required" });
+    }
+    revokePro(email);
+    return res.json({ ok: true, email: email, pro: false });
+  } catch (e) {
+    console.error("[owner/revoke-pro]", e.message || e);
+    return res.status(500).json({ ok: false, error: "Could not revoke Pro" });
+  }
+});
+
+app.get("/api/owner/lookup", requireOwner, function (req, res) {
+  try {
+    var email = normalizeEmail(req.query && req.query.email);
+    if (!isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "Valid email required" });
+    }
+    var g = grants[email];
+    var pro = !!(g && g.proUntil && g.proUntil > Date.now());
+    return res.json({
+      ok: true,
+      email: email,
+      pro: pro,
+      proUntil: pro ? g.proUntil : 0,
+      plan: pro ? g.plan : null,
+      source: pro ? g.source : null,
+      hasGrantRecord: !!g,
+    });
+  } catch (e) {
+    console.error("[owner/lookup]", e.message || e);
+    return res.status(500).json({ ok: false, error: "Lookup failed" });
+  }
+});
+
+app.get("/api/owner/stats", requireOwner, function (_req, res) {
+  try {
+    var pending = Object.keys(swishPending).filter(function (k) {
+      var e = swishPending[k];
+      return e && (e.status === "pending" || e.status === "claimedByUser");
+    }).length;
+    var activeGrants = Object.keys(grants).filter(function (k) {
+      var g = grants[k];
+      return g && g.proUntil && g.proUntil > Date.now();
+    }).length;
+    return res.json({
+      ok: true,
+      pendingSwish: pending,
+      activeProGrants: activeGrants,
+      maintenance: !!siteConfig.maintenance,
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: "Stats failed" });
   }
 });
 

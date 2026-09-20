@@ -45,6 +45,14 @@
     </div>
   </div>
 
+  <!-- Owner announce (site-wide message) -->
+  <div id="announce-banner" class="announce-banner" hidden role="status">
+    <div class="container announce-banner-inner">
+      <span id="announce-banner-text" class="announce-banner-text"></span>
+      <button type="button" id="announce-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss announcement">Dismiss</button>
+    </div>
+  </div>
+
   <nav class="nav">
     <div class="container nav-inner">
       <a href="index.html" class="logo">
@@ -60,12 +68,12 @@
         <li id="nav-pro-badge" class="nav-pro-badge" hidden>
           <span class="pro-badge" title="Pro entitlement active">Pro</span>
         </li>
-        <li id="nav-owner-badge" class="nav-owner-badge" hidden>
+        <li id="nav-owner-badge" class="nav-owner-badge owner-only" hidden>
           <span class="owner-badge" title="Owner account">Owner</span>
         </li>
         <li id="nav-user" class="nav-user" hidden>
           <span id="user-name" class="user-name"></span>
-          <button type="button" id="owner-panel-btn" class="btn btn-ghost btn-sm-nav" hidden>Owner Panel</button>
+          <button type="button" id="owner-panel-btn" class="btn btn-ghost btn-sm-nav owner-only" hidden>Owner Panel</button>
           <button type="button" id="pricing-btn" class="btn btn-ghost btn-sm-nav" title="Pricing">Pricing</button>
           <button type="button" id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -557,7 +565,7 @@
         <button type="button" class="btn btn-ghost btn-block" id="reset-session-btn">Reset my local session</button>
       </div>
 
-      <div id="owner-admin-panel" class="settings-block settings-owner" hidden>
+      <div id="owner-admin-panel" class="settings-block settings-owner owner-only" hidden>
         <p class="input-label">Owner admin <span class="owner-pill">owner</span></p>
         <p class="settings-hint">Full controls live in the Owner Panel. Quick toggle here.</p>
         <div class="owner-toggle-row">
@@ -609,13 +617,13 @@
 
 
   <!-- Owner Panel (owner only) -->
-  <div id="owner-panel" class="owner-panel" hidden>
+  <div id="owner-panel" class="owner-panel owner-only" hidden>
     <div class="container owner-panel-inner">
       <div class="owner-panel-head">
         <div>
           <p class="modal-eyebrow">Owner</p>
           <h1>Owner Panel</h1>
-          <p class="modal-sub">Local controls · Swish pending · gift codes · grants · waitlist · local help reports · stats.</p>
+          <p class="modal-sub">Maintenance · announce · flags · Swish queue · gifts · Pro grants · lookup · credits · stats.</p>
         </div>
         <button type="button" class="btn btn-ghost" id="owner-panel-close">← Back to app</button>
       </div>
@@ -623,7 +631,7 @@
       <div class="owner-grid">
         <section class="owner-card">
           <h2>Maintenance</h2>
-          <p class="settings-hint">When <strong>On</strong>, non-owners see the update screen. Owner always bypasses. Toggle off when ready.</p>
+          <p class="settings-hint">Kill switch. When <strong>On</strong>, non-owners see the update screen and generate is blocked. Owner always bypasses.</p>
           <div class="owner-toggle-row">
             <p class="owner-toggle-label">Update mode</p>
             <button type="button" id="owner-maint-toggle" class="void-mode-toggle" role="switch" aria-checked="false" aria-label="Toggle maintenance">
@@ -633,9 +641,48 @@
           </div>
         </section>
 
+        <section class="owner-card">
+          <h2>Announce banner</h2>
+          <p class="settings-hint">Site-wide message shown in-app (above nav). Clear to hide for everyone.</p>
+          <form id="announce-form" class="owner-form">
+            <label class="input-label" for="announce-input">Message</label>
+            <input id="announce-input" class="auth-input" type="text" maxlength="280" placeholder="e.g. Swish Pro unlocks within minutes today" autocomplete="off" />
+            <div class="owner-form-row">
+              <button type="submit" class="btn btn-primary">Set announce</button>
+              <button type="button" class="btn btn-ghost" id="announce-clear-btn">Clear</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="owner-card">
+          <h2>Feature flags</h2>
+          <p class="settings-hint">Toggle product surfaces. Off hides them for non-owners.</p>
+          <div class="owner-toggle-row">
+            <p class="owner-toggle-label">Batch mode</p>
+            <button type="button" id="flag-batch-toggle" class="void-mode-toggle" role="switch" aria-checked="true" aria-label="Toggle batch">
+              <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+              <span id="flag-batch-status" class="void-mode-status">On</span>
+            </button>
+          </div>
+          <div class="owner-toggle-row">
+            <p class="owner-toggle-label">VOID Labs</p>
+            <button type="button" id="flag-labs-toggle" class="void-mode-toggle" role="switch" aria-checked="true" aria-label="Toggle Labs">
+              <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+              <span id="flag-labs-status" class="void-mode-status">On</span>
+            </button>
+          </div>
+          <div class="owner-toggle-row">
+            <p class="owner-toggle-label">New signups</p>
+            <button type="button" id="flag-signups-toggle" class="void-mode-toggle" role="switch" aria-checked="true" aria-label="Toggle signups">
+              <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+              <span id="flag-signups-status" class="void-mode-status">On</span>
+            </button>
+          </div>
+        </section>
+
         <section class="owner-card owner-card-wide" id="swish-pending-card">
-          <h2>Swish pending</h2>
-          <p class="settings-hint">Buyers send money to your Swish with a unique <code>VOID-XXXX</code> ref. Confirm only after you see the payment in Swish. <strong>Confirm</strong> grants Pro; <strong>Reject</strong> cancels.</p>
+          <h2>Swish queue</h2>
+          <p class="settings-hint">Buyers send money to your Swish with a unique <code>VOID-XXXX</code> ref. Confirm only after you see the payment. <strong>Confirm</strong> grants Pro; <strong>Reject</strong> cancels.</p>
           <div class="owner-form-row" style="margin-bottom:0.65rem">
             <button type="button" class="btn btn-ghost" id="swish-pending-refresh">Refresh</button>
             <span id="swish-pending-count" class="settings-hint" style="margin:0">—</span>
@@ -645,7 +692,7 @@
 
         <section class="owner-card">
           <h2>Gift / redeem codes</h2>
-          <p class="settings-hint">Create codes for Pro duration. <strong>Revoke</strong> stops new redemptions (confirm required).</p>
+          <p class="settings-hint">Create codes with duration + max uses. <strong>Disable</strong> stops new redemptions.</p>
           <form id="gift-code-form" class="owner-form">
             <label class="input-label" for="gift-code-custom">Code (blank = random)</label>
             <input id="gift-code-custom" class="auth-input" type="text" maxlength="32" placeholder="VOID-XXXX or leave blank" autocomplete="off" />
@@ -667,17 +714,51 @@
         </section>
 
         <section class="owner-card">
-          <h2>Grant credits / unlimited</h2>
-          <form id="grant-form" class="owner-form">
-            <label class="input-label" for="grant-email">User email</label>
+          <h2>Grant / revoke Pro</h2>
+          <p class="settings-hint">Direct Pro by email. Also syncs to server when API is up.</p>
+          <form id="pro-grant-form" class="owner-form">
+            <label class="input-label" for="pro-grant-email">User email</label>
+            <input id="pro-grant-email" class="auth-input" type="email" required placeholder="user@email.com" />
+            <label class="input-label" for="pro-grant-days">Days</label>
+            <input id="pro-grant-days" class="auth-input" type="number" min="1" max="3650" value="30" />
+            <div class="owner-form-row">
+              <button type="submit" class="btn btn-primary">Grant Pro</button>
+              <button type="button" class="btn btn-ghost danger-outline" id="pro-revoke-btn">Revoke Pro</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="owner-card">
+          <h2>Force credits</h2>
+          <p class="settings-hint">Set free gens remaining for an email (exact value). Add-only still available below.</p>
+          <form id="force-credits-form" class="owner-form">
+            <label class="input-label" for="force-credits-email">User email</label>
+            <input id="force-credits-email" class="auth-input" type="email" required placeholder="user@email.com" />
+            <label class="input-label" for="force-credits-value">Credits remaining</label>
+            <input id="force-credits-value" class="auth-input" type="number" min="0" max="9999" value="10" />
+            <button type="submit" class="btn btn-primary btn-block">Set credits</button>
+          </form>
+          <form id="grant-form" class="owner-form" style="margin-top:1rem">
+            <label class="input-label" for="grant-email">Add credits / unlimited</label>
             <input id="grant-email" class="auth-input" type="email" required placeholder="user@email.com" />
             <label class="input-label" for="grant-credits">Add credits</label>
             <input id="grant-credits" class="auth-input" type="number" min="0" max="9999" value="10" />
             <div class="owner-form-row">
-              <button type="submit" class="btn btn-primary">Add credits</button>
+              <button type="submit" class="btn btn-ghost">Add credits</button>
               <button type="button" class="btn btn-ghost" id="grant-unlimited-btn">Grant unlimited</button>
             </div>
           </form>
+        </section>
+
+        <section class="owner-card">
+          <h2>User lookup</h2>
+          <p class="settings-hint">Paste email → local account + entitlement + server Pro if available.</p>
+          <form id="lookup-form" class="owner-form">
+            <label class="input-label" for="lookup-email">Email</label>
+            <input id="lookup-email" class="auth-input" type="email" required placeholder="user@email.com" />
+            <button type="submit" class="btn btn-primary btn-block">Look up</button>
+          </form>
+          <pre id="lookup-result" class="owner-lookup-result" hidden></pre>
         </section>
 
         <section class="owner-card">
@@ -702,14 +783,18 @@
         </section>
 
         <section class="owner-card owner-card-wide">
-          <h2>Stats <span class="dev-pill">local</span></h2>
+          <h2>Stats snapshot</h2>
+          <p class="settings-hint">Real counts only — local store + server pending Swish / Pro grants when API responds.</p>
           <div class="stats-grid" id="owner-stats">
             <div class="stat-tile"><span class="stat-n" id="stat-signups">0</span><span class="stat-l">Signups</span></div>
             <div class="stat-tile"><span class="stat-n" id="stat-verified">0</span><span class="stat-l">Verified</span></div>
             <div class="stat-tile"><span class="stat-n" id="stat-gens">0</span><span class="stat-l">Gens (local)</span></div>
             <div class="stat-tile"><span class="stat-n" id="stat-waitlist">0</span><span class="stat-l">Waitlist</span></div>
             <div class="stat-tile"><span class="stat-n" id="stat-codes">0</span><span class="stat-l">Active codes</span></div>
-            <div class="stat-tile"><span class="stat-n" id="stat-pro">0</span><span class="stat-l">Pro entitlements</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-codes-issued">0</span><span class="stat-l">Codes issued</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-pro">0</span><span class="stat-l">Pro (local)</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-pro-server">—</span><span class="stat-l">Pro (server)</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-swish">—</span><span class="stat-l">Pending Swish</span></div>
             <div class="stat-tile"><span class="stat-n" id="stat-bugs">0</span><span class="stat-l">Local reports</span></div>
           </div>
         </section>
