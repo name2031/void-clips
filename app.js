@@ -1086,26 +1086,112 @@
     return n;
   }
 
+  function applyServerProLocal(email, proUntil, source) {
+    email = normalizeEmail(email);
+    setEntitlement(email, {
+      proUntil: proUntil || 0,
+      unlimited: false,
+      source: source || "owner-grant",
+    });
+    if (currentUser && normalizeEmail(currentUser.email) === email) {
+      currentUser.pro = !!(proUntil && proUntil > Date.now());
+      currentUser.proUntil = proUntil || 0;
+      currentUser.unlimited = false;
+      if (currentUser.pro) {
+        currentUser.credits = Infinity;
+      } else {
+        var acct = getAccount(email);
+        currentUser.credits = acct && typeof acct.credits === "number" ? acct.credits : FREE_CREDITS;
+      }
+      saveUser(currentUser);
+      updateCreditsUI();
+    }
+  }
+
   function ownerGrantPro(email, days) {
     email = normalizeEmail(email);
-    days = Math.max(1, Math.min(3650, Number(days) || 30));
-    var until = activatePro(email, days, "owner-grant");
-    fetch("/api/owner/grant-pro", {
+    days = Math.max(1, Math.min(3650, Math.floor(Number(days) || 30)));
+    return fetch("/api/owner/grant-pro", {
       method: "POST",
       headers: ownerApiHeaders(),
       body: JSON.stringify({ email: email, days: days }),
-    }).catch(function () {});
-    return until;
+    })
+      .then(function (r) {
+        return r
+          .json()
+          .catch(function () {
+            return {};
+          })
+          .then(function (body) {
+            return { httpOk: r.ok, body: body };
+          });
+      })
+      .then(function (result) {
+        if (result.httpOk && result.body && result.body.ok && result.body.proUntil) {
+          applyServerProLocal(email, result.body.proUntil, "owner-grant");
+          return {
+            server: true,
+            until: result.body.proUntil,
+            plan: result.body.plan,
+            email: email,
+          };
+        }
+        var until = activatePro(email, days, "owner-grant");
+        return {
+          server: false,
+          until: until,
+          email: email,
+          error: (result.body && result.body.error) || "Server grant failed",
+        };
+      })
+      .catch(function () {
+        var until = activatePro(email, days, "owner-grant");
+        return {
+          server: false,
+          until: until,
+          email: email,
+          error: "Server unreachable",
+        };
+      });
   }
 
   function ownerRevokePro(email) {
     email = normalizeEmail(email);
-    revokeProLocal(email);
-    fetch("/api/owner/revoke-pro", {
+    return fetch("/api/owner/revoke-pro", {
       method: "POST",
       headers: ownerApiHeaders(),
       body: JSON.stringify({ email: email }),
-    }).catch(function () {});
+    })
+      .then(function (r) {
+        return r
+          .json()
+          .catch(function () {
+            return {};
+          })
+          .then(function (body) {
+            return { httpOk: r.ok, body: body };
+          });
+      })
+      .then(function (result) {
+        if (result.httpOk && result.body && result.body.ok) {
+          revokeProLocal(email);
+          return { server: true, email: email };
+        }
+        revokeProLocal(email);
+        return {
+          server: false,
+          email: email,
+          error: (result.body && result.body.error) || "Server revoke failed",
+        };
+      })
+      .catch(function () {
+        revokeProLocal(email);
+        return {
+          server: false,
+          email: email,
+          error: "Server unreachable",
+        };
+      });
   }
 
   function addCreditsToEmail(email, n) {
@@ -3621,9 +3707,20 @@
         showToast("Enter an email");
         return;
       }
-      var until = ownerGrantPro(email, days);
-      showToast("Pro granted → " + normalizeEmail(email) + " until " + formatExpiry(until));
-      refreshOwnerStats();
+      ownerGrantPro(email, days).then(function (result) {
+        if (result.server) {
+          showToast(
+            "Pro granted → " + result.email + " until " + formatExpiry(result.until)
+          );
+        } else {
+          showToast(
+            (result.error || "Server failed") +
+              " — local Pro until " +
+              formatExpiry(result.until)
+          );
+        }
+        refreshOwnerStats();
+      });
     });
   }
   if (proRevokeBtn) {
@@ -3635,9 +3732,18 @@
         return;
       }
       if (!confirm("Revoke Pro for " + normalizeEmail(email) + "?")) return;
-      ownerRevokePro(email);
-      showToast("Pro revoked for " + normalizeEmail(email));
-      refreshOwnerStats();
+      ownerRevokePro(email).then(function (result) {
+        if (result.server) {
+          showToast("Pro revoked for " + result.email);
+        } else {
+          showToast(
+            (result.error || "Server failed") +
+              " — Pro cleared locally for " +
+              result.email
+          );
+        }
+        refreshOwnerStats();
+      });
     });
   }
 

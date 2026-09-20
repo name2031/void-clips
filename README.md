@@ -86,8 +86,33 @@ Gift / owner codes still unlock Pro. Without `STRIPE_SECRET_KEY`, the card butto
 1. Maintenance / update mode  
 2. **Swish pending** — Confirm → grant Pro / Reject  
 3. Gift / redeem codes  
-4. Grant unlimited or add credits  
-5. Waitlist / local stats  
+4. **Grant / Revoke Pro** (server entitlement store; local fallback if API down)  
+5. Force credits / waitlist / local stats  
+
+---
+
+## Owner API
+
+Auth (same as other `/api/owner/*` routes):
+
+- Header `X-Void-Api-Secret: <VOID_API_SECRET>` (or `Authorization: Bearer …`)
+- Header `X-Owner-Email: yuel.zeru2000@gmail.com` (must match `OWNER_EMAIL`)
+
+| Method | Path | Body / query | Notes |
+|--------|------|--------------|-------|
+| `POST` | `/api/owner/grant-pro` | `{ "email", "days" }` | `days` integer **1–3650**. Persists Pro in the same grants store as Stripe/Swish. Returns `{ ok, email, pro, proUntil, plan, source: "owner-grant" }`. |
+| `POST` | `/api/owner/revoke-pro` | `{ "email" }` | Clears Pro for that email. Returns `{ ok, email, pro: false }`. |
+| `GET` | `/api/owner/entitlement?email=` | query | Current Pro status (`pro`, `proUntil`, `plan`, `source`). Alias: `/api/owner/lookup`. |
+
+Example:
+
+```bash
+curl -X POST https://YOUR_HOST/api/owner/grant-pro \
+  -H "Content-Type: application/json" \
+  -H "X-Void-Api-Secret: YOUR_VOID_API_SECRET" \
+  -H "X-Owner-Email: yuel.zeru2000@gmail.com" \
+  -d '{"email":"user@example.com","days":30}'
+```
 
 ---
 

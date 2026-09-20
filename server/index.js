@@ -215,7 +215,7 @@ function grantPro(email, plan, sessionId, amount, currency, source) {
 
 function grantProDays(email, days, source) {
   email = normalizeEmail(email);
-  days = Math.max(1, Math.min(3650, Number(days) || 30));
+  days = Math.max(1, Math.min(3650, Math.floor(Number(days) || 30)));
   var prev = grants[email];
   var base = prev && prev.proUntil && prev.proUntil > Date.now() ? prev.proUntil : Date.now();
   var until = base + days * 24 * 60 * 60 * 1000;
@@ -226,7 +226,7 @@ function grantProDays(email, days, source) {
     sessionId: "",
     amount: 0,
     currency: "eur",
-    source: source || "owner",
+    source: source || "owner-grant",
     updatedAt: Date.now(),
   };
   persistGrants();
@@ -1113,18 +1113,24 @@ app.post("/api/owner/site-config", requireOwner, function (req, res) {
 app.post("/api/owner/grant-pro", requireOwner, function (req, res) {
   try {
     var email = normalizeEmail(req.body && req.body.email);
-    var days = Number(req.body && req.body.days) || 30;
+    var days = Number(req.body && req.body.days);
     if (!isEmail(email)) {
       return res.status(400).json({ ok: false, error: "Valid email required" });
     }
-    var g = grantProDays(email, days, "owner");
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      return res.status(400).json({
+        ok: false,
+        error: "days must be an integer from 1 to 3650",
+      });
+    }
+    var g = grantProDays(email, days, "owner-grant");
     return res.json({
       ok: true,
       email: email,
       pro: true,
       proUntil: g.proUntil,
       plan: g.plan,
-      source: g.source,
+      source: "owner-grant",
     });
   } catch (e) {
     console.error("[owner/grant-pro]", e.message || e);
@@ -1146,23 +1152,40 @@ app.post("/api/owner/revoke-pro", requireOwner, function (req, res) {
   }
 });
 
+function ownerEntitlementPayload(email) {
+  var g = grants[email];
+  var pro = !!(g && g.proUntil && g.proUntil > Date.now());
+  return {
+    ok: true,
+    email: email,
+    pro: pro,
+    proUntil: pro ? g.proUntil : 0,
+    plan: pro ? g.plan : null,
+    source: pro ? g.source : null,
+    hasGrantRecord: !!g,
+  };
+}
+
+app.get("/api/owner/entitlement", requireOwner, function (req, res) {
+  try {
+    var email = normalizeEmail(req.query && req.query.email);
+    if (!isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "Valid email required" });
+    }
+    return res.json(ownerEntitlementPayload(email));
+  } catch (e) {
+    console.error("[owner/entitlement]", e.message || e);
+    return res.status(500).json({ ok: false, error: "Lookup failed" });
+  }
+});
+
 app.get("/api/owner/lookup", requireOwner, function (req, res) {
   try {
     var email = normalizeEmail(req.query && req.query.email);
     if (!isEmail(email)) {
       return res.status(400).json({ ok: false, error: "Valid email required" });
     }
-    var g = grants[email];
-    var pro = !!(g && g.proUntil && g.proUntil > Date.now());
-    return res.json({
-      ok: true,
-      email: email,
-      pro: pro,
-      proUntil: pro ? g.proUntil : 0,
-      plan: pro ? g.plan : null,
-      source: pro ? g.source : null,
-      hasGrantRecord: !!g,
-    });
+    return res.json(ownerEntitlementPayload(email));
   } catch (e) {
     console.error("[owner/lookup]", e.message || e);
     return res.status(500).json({ ok: false, error: "Lookup failed" });
