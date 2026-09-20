@@ -437,8 +437,9 @@ function pricingPayload() {
     swishNumber: swishNumberE164(),
     swishNumberDisplay: formatSwishDisplay(SWISH_NUMBER_RAW),
     swishNumberIntl: formatSwishIntl(SWISH_NUMBER_RAW),
-    moneyNote:
-      "Primary: Swish (manual) to owner’s number with unique ref. Optional: Stripe cards when configured. Owner confirms Swish before Pro unlocks.",
+    moneyNote: STRIPE_SECRET_KEY
+      ? "Pay with card (Stripe Checkout) or Swish to the owner’s number with a unique VOID-XXXX ref. Owner confirms Swish before Pro unlocks."
+      : "Pay with Swish (manual) to the owner’s number with a unique VOID-XXXX ref. Owner confirms before Pro unlocks. Card checkout when Stripe is configured.",
   };
 }
 

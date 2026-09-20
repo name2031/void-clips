@@ -7,3 +7,5 @@ server/.env
 .git
 PC_SYNC.txt
 LOCAL_API_KEY.txt
+*.pem
+.env.*

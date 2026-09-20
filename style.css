@@ -2898,6 +2898,39 @@ button[aria-busy="true"] {
 }
 
 
+
+/* —— Launch polish: mobile checkout / pricing —— */
+@media (max-width: 640px) {
+  .checkout-actions .btn {
+    min-height: 2.75rem;
+    font-size: 0.95rem;
+  }
+  .payments-status {
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+  .upgrade-cta h2 {
+    font-size: 1.35rem;
+  }
+  .upgrade-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .upgrade-actions .btn {
+    width: 100%;
+  }
+  .nav-links .btn-sm-nav {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.78rem;
+  }
+  #pricing-modal .modal-card-lg {
+    max-height: min(92vh, 720px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* —— Launch promo + Stripe payments —— */
 .launch-promo-banner {
   margin: 0 0 0.85rem;

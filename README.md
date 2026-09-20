@@ -2,17 +2,16 @@
 
 **Long videos in. Viral clips out.**
 
-> ✅ **Public launch enabled** — deploy with Railway (`npm start` / `node server/index.js`).  
-> No public deploy, no domain registration, no hosting, no “soft public” share.  
-> Local only until explicit go-ahead.
+> ✅ **Public on Railway** — https://void-clips-production.up.railway.app  
+> Repo: https://github.com/name2031/void-clips (deploys `main` → Railway)
 
 Premium product shell for creator **Yuel** (TikTok [@V_O_I_.D](https://www.tiktok.com/@V_O_I_.D)).
 
-Black + violet neon · Space Grotesk · **optional local verify server (Resend)** · accounts in browser.
+Black + violet neon · Space Grotesk · Resend Gmail verify · Swish + Stripe Pro · accounts in browser.
 
 ---
 
-## How to run (local only)
+## How to run (local)
 
 ### A) Static only (demo verify fallback)
 
@@ -21,115 +20,83 @@ cd void-clips
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080`. Email verify falls back to a **demo code modal** with warning: *Not secure — start server for real Gmail*. Prefer `?demo=1` explicitly or keep the local flag.
+Open `http://localhost:8080`. Email verify falls back to a **demo code modal** with warning: *Not secure — start server for real Gmail*.
 
 ### B) Local server + real Gmail codes (Resend)
 
 ```bash
-cd void-clips/server
+cd void-clips
 npm install
 # Configure server/.env (never commit real keys):
-#   VOID_API_SECRET=…     # from LOCAL_API_KEY.txt if present
-#   RESEND_API_KEY=…      # from Resend dashboard
-#   FROM_EMAIL=onboarding@resend.dev   # Resend test sender
-node index.js
+#   VOID_API_SECRET=…
+#   RESEND_API_KEY=…
+#   FROM_EMAIL=onboarding@resend.dev
+#   SWISH_NUMBER=+46765875459
+#   STRIPE_SECRET_KEY=sk_…          # cards
+#   STRIPE_WEBHOOK_SECRET=whsec_…
+npm start
 ```
 
-Visit `http://127.0.0.1:8787` (default port). On the school PC, use **Start VOID Clips.bat** (OneDrive Skrivbordet) which launches portable Node against this folder.  
-`POST /api/send-verify` emails a 6-digit code via Resend when `RESEND_API_KEY` is set. Without it, the API returns **503** and the app can fall back to demo mode.
+Visit `http://127.0.0.1:8787`.
 
-> 🔐 **Rotate any API key that was pasted in chat before any future deploy.**  
-> Do not print secrets in logs or commit `.env`.
+> 🔐 **Never commit `.env`, `LOCAL_API_KEY.txt`, or `sk_` / `whsec_` / `re_` keys.**  
+> Rotate any key that was pasted in chat.
 
 | File | Purpose |
 |------|---------|
 | `index.html` | Landing |
-| `app.html` / `app.js` | Auth, verify, Swish + Stripe Pro checkout, Owner Panel, Resonance |
-| `server/` | Express verify API + Swish pending + Stripe + static host |
-| `terms.html` / `privacy.html` | Stubs |
+| `app.html` / `app.js` | Auth, verify, Swish + Stripe Pro, Owner Panel, Resonance |
+| `server/` | Express API + Stripe + Swish pending + static host |
+| `terms.html` / `privacy.html` | Terms & privacy |
 | `DESCRIPTIONS.md` | Marketing copy |
 
 ---
 
-## Auth (harder)
+## Auth
 
 - Sign up / sign in: **email + strong password** (min **10**, upper + lower + number)
 - Passwords: **salted SHA-256** (Web Crypto) — never plaintext
 - After password: **must verify** with 6-digit code before any app use
-- Rate limits: max **5** failed passwords → **60s** lockout; max **5** code tries (verify + reset)
-- Session: **sessionStorage** by default; check **Remember this device** → **localStorage** (longer session)
-- **Sign out** (nav + Settings) clears session
-- Prefer `/api/send-verify` → real email; demo modal only as fallback (warning shown)
-- Settings: **Change password**, **Reset my local session** (stuck states)
+- Rate limits: max **5** failed passwords → **60s** lockout; max **5** code tries
+- Session: **sessionStorage** by default; **Remember this device** → **localStorage**
+- Prefer `/api/send-verify` → real email; demo modal only as fallback
 
-### Forgot password
+**OWNER_EMAIL:** `yuel.zeru2000@gmail.com` (after verify)
 
-1. On **Sign in**, tap **Forgot password?**
-2. Enter email → **Send reset code** (same `/api/send-verify` as verify; if API unavailable, demo modal shows the code with the “Not secure” warning)
-3. Enter the **6-digit code** + **new password** + confirm → **Save & sign in**
-4. App stores a new salted hash, marks the account **verified**, and opens a session
+---
 
-If you see “No account… Create account first”, switch to **Create account** (owner email can also bootstrap via Forgot password when the local account is missing/corrupt).
+## Checkout / Pro (EUR)
 
-**OWNER_EMAIL:** `yuel.zeru2000@gmail.com` (after verify)  
-Local demo only: no plaintext owner password is hardcoded — use Create account or Forgot password to set one.
+| | Monthly | Yearly |
+|--|---------|--------|
+| Normal | **€9.99** | **€79** |
+| Launch promo (first ~30 days / `LAUNCH_PROMO_UNTIL`) | **€4.99** | **€39** |
+
+**Both payment paths are live in production when configured:**
+
+1. **Card (Stripe)** — in-app **Pay with card** → Stripe Checkout → Pro after confirm / webhook  
+2. **Swish** — send to **+46 76-587 54 59** (`076-587 54 59`) with unique `VOID-XXXX` ref → **I've paid** → owner confirms in Owner Panel  
+
+Gift / owner codes still unlock Pro. Without `STRIPE_SECRET_KEY`, the card button stays hidden; Swish still works.
 
 ---
 
 ## Owner Panel (owner only)
 
-1. Maintenance / update mode toggle  
-2. **Swish pending** — list buyers who tapped “I've paid”; **Confirm → grant Pro** or **Reject** (check Swish app first)  
-3. **Gift / redeem codes** — create (random or custom), duration 7d / 30d / 90d / 1y / custom days, max redemptions, list + revoke  
-4. Grant **unlimited** or **add credits** to an email  
-5. View waitlist / clear users (local)  
-6. Stats placeholders (signups, gens, …) from localStorage  
+1. Maintenance / update mode  
+2. **Swish pending** — Confirm → grant Pro / Reject  
+3. Gift / redeem codes  
+4. Grant unlimited or add credits  
+5. Waitlist / local stats  
 
 ---
 
-## Checkout / Pro (real money)
+## Deploy (GitHub → Railway)
 
-**Prices (EUR):**
-- Normal: **€9.99/mo** · **€79/yr** (~2 months free)
-- Launch promo (first 30 days after public / `LAUNCH_PROMO_UNTIL`): **€4.99/mo** · **€39/yr**
-- UI shows strikethrough of €9.99 + “Cheaper than before / launch price” + “Back to normal price after 1 month”
+Push to `main` on https://github.com/name2031/void-clips. Railway rebuilds from GitHub.
 
-**Swish (primary for Sweden — manual, no Företag API):**
-1. Set `SWISH_NUMBER=+46765875459` in `server/.env` (display: `076-587 54 59` / `+46 76-587 54 59`)
-2. Buyer taps **Pay with Swish** → gets amount + number + unique ref e.g. `VOID-AB12`
-3. Buyer sends Swish with that ref in the message → taps **I've paid** (stores pending; does **not** auto-grant Pro)
-4. Yuel checks Swish app → Owner Panel → **Confirm → grant Pro** (or Reject)
-5. Pending stored in `server/.data/swish-pending.json`
+Required platform env (never in git): `VOID_API_SECRET`, `RESEND_API_KEY`, `FROM_EMAIL`, `SWISH_NUMBER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, optional `LAUNCH_PROMO_UNTIL`, `PUBLIC_BASE`.
 
-**Stripe (optional second path — cards):**
-1. Create account at [stripe.com](https://stripe.com) and add bank/card for **payouts**
-2. Put in `server/.env`:
-   - `STRIPE_SECRET_KEY=sk_test_…` (or `sk_live_…` only when public)
-   - `STRIPE_WEBHOOK_SECRET=whsec_…` (for public webhook; local uses claim-on-return)
-   - Optional: `LAUNCH_PROMO_UNTIL=2026-11-01T00:00:00+01:00`
-3. Restart server. Health shows `stripeConfigured: true`
-4. In-app **Pay with card** opens Checkout Session → money to Stripe → bank
-5. Pro granted only after Stripe confirms (`/api/claim-checkout` or webhook)
-
-Without Stripe key, Swish still works; card button stays hidden. **Gift / owner codes** still unlock Pro.
-
-- Free users: **10** gens · Resonance kept · void aesthetic
-- Entitlements: localStorage + server `.data/pro-grants.json` after confirmed Swish or paid Stripe
-
-> Keep secrets in platform env (never commit `.env`). Rotate anything pasted in chat.
-
----
-
-## Launch checklist (ONLY when Yuel says go)
-
-1. Rotate all leaked/pasted API keys  
-2. `noindex` removed — indexing allowed  
-3. Real domain / hosting only if asked  
-4. Real AI pipeline before claiming AI  
-5. Real payments when ready  
-
-Until then: **local only. No public deploy.**
-
-Zip: `/workspace/void-clips.zip`
+Support: **yuel.zeru2000@gmail.com** · subject `VOID Clips Support` / `VOID Clips Bug`.
 
 © 2026 VOID Clips · Yuel (@V_O_I_.D)

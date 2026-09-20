@@ -1029,7 +1029,7 @@
     if (authTitle) authTitle.textContent = "Welcome to VOID";
     if (authSub) {
       authSub.innerHTML =
-        'Sign in or create an account. <strong>Strong password</strong> · email verify required · local only.';
+        'Sign in or create an account. <strong>Strong password</strong> · email verify required · 10 free gens.';
     }
     if (authError) {
       authError.hidden = true;
@@ -2589,11 +2589,13 @@
       var swishNum =
         (cachedPricing && (cachedPricing.swishNumberDisplay || cachedPricing.swishNumberIntl)) ||
         "076-587 54 59";
-      paymentsStatusEl.textContent =
-        "Swish (recommended, Sweden): send to " +
-        swishNum +
-        " with your unique VOID-XXXX ref. Owner confirms before Pro unlocks." +
-        (stripeConfigured ? " Cards via Stripe also available." : "");
+      paymentsStatusEl.textContent = stripeConfigured
+        ? "Pay with card (Stripe Checkout) or Swish to " +
+          swishNum +
+          " (unique VOID-XXXX ref; owner confirms Swish before Pro unlocks)."
+        : "Swish (Sweden): send to " +
+          swishNum +
+          " with your unique VOID-XXXX ref. Owner confirms before Pro unlocks. Card checkout when Stripe is configured.";
     }
     if (swishPayBtn) {
       swishPayBtn.disabled = false;
@@ -2622,8 +2624,8 @@
     }
     if (pricingSub) {
       pricingSub.textContent = launch
-        ? "Cheaper than before — launch price. Pay with Swish (Sweden) or card · or redeem a gift code."
-        : "Unlimited gens + downloads. Pay with Swish (Sweden) or card · or redeem a gift code.";
+        ? "Cheaper than before — launch price. Pay with card (Stripe) or Swish · or redeem a gift code."
+        : "Unlimited gens + downloads. Pay with card (Stripe) or Swish · or redeem a gift code.";
     }
   }
 
@@ -2696,7 +2698,7 @@
         showToast("Swish ready — send " + formatEur(body.amountEur) + " with ref " + body.ref);
       })
       .catch(function () {
-        showToast("Swish failed — is the local server running?");
+        showToast("Swish failed — check connection and try again");
       })
       .then(function () {
         if (swishPayBtn) {
@@ -3237,7 +3239,7 @@
         return;
       }
       if (!stripeConfigured) {
-        showToast("Card payments not connected — use Swish or a gift code");
+        showToast("Card checkout unavailable — use Swish or a gift code");
         applyPricingUI();
         return;
       }
@@ -3267,7 +3269,7 @@
           applyPricingUI();
         })
         .catch(function () {
-          showToast("Checkout failed — is the local server running?");
+          showToast("Checkout failed — check connection and try again");
           applyPricingUI();
         })
         .then(function () {

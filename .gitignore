@@ -6,3 +6,8 @@ server/.env
 *.zip
 LOCAL_API_KEY.txt
 .DS_Store
+PC_SYNC.txt
+*.pem
+.env.*
+!.env.example
+!server/.env.example
