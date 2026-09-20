@@ -261,14 +261,25 @@
 
   <main id="app-main" class="container app-wrap" hidden>
     <div class="app-header">
-      <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
+      <div class="app-header-top">
+        <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
+        <div class="studio-quick">
+          <span id="streak-pill" class="streak-pill" hidden title="Daily VOID streak">🔥 0</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-labs-btn-top" title="VOID Labs">Labs</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-history-btn-top" title="Generation history">History</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-favorites-btn-top" title="Starred clips">★ Favorites</button>
+        </div>
+      </div>
       <h1>Generate clips</h1>
-      <p>Paste a link. Pick a style. Get punchy hooks, Shorts-style previews &amp; VOID Resonance — demo cards, not live AI.</p>
+      <p>Paste a link. Pick a style. Get punchy hooks, platform packs &amp; VOID Resonance — you film; we plan the post.</p>
     </div>
 
     <div class="input-card">
-      <label class="input-label" for="url-input">Video URL</label>
-      <div class="url-row">
+      <div class="input-label-row">
+        <label class="input-label" for="url-input">Video URL</label>
+        <button type="button" id="batch-toggle" class="batch-toggle" aria-pressed="false" title="Paste multiple links">Batch</button>
+      </div>
+      <div class="url-row" id="single-url-row">
         <div class="url-field">
           <input
             id="url-input"
@@ -281,6 +292,21 @@
           <span id="paste-hint" class="paste-hint" hidden>Detected link</span>
         </div>
         <button id="generate-btn" class="btn btn-primary" type="button">Generate</button>
+      </div>
+      <div id="batch-url-row" class="batch-url-row" hidden>
+        <label class="input-label" for="batch-url-input">Batch links</label>
+        <textarea
+          id="batch-url-input"
+          class="batch-url-input"
+          rows="4"
+          placeholder="Paste multiple YouTube / TikTok links — one per line or comma-separated"
+          spellcheck="false"
+        ></textarea>
+        <div class="batch-actions">
+          <span id="batch-count" class="batch-count">0 links</span>
+          <button id="batch-generate-btn" class="btn btn-primary" type="button">Generate batch</button>
+        </div>
+        <p class="batch-hint">Uses one credit per link · free plan stops when credits run out</p>
       </div>
 
       <div class="controls-row">
@@ -325,6 +351,23 @@
             <span id="void-mode-status" class="void-mode-status">On</span>
           </button>
           <p class="void-mode-hint">Resonance score, voice &amp; pin bait</p>
+        </div>
+
+        <div class="control-group">
+          <span class="input-label" id="series-mode-label">Series</span>
+          <button
+            type="button"
+            id="series-mode-toggle"
+            class="void-mode-toggle"
+            role="switch"
+            aria-checked="false"
+            aria-labelledby="series-mode-label"
+            title="Turn one link into a 3-part cliffhanger series"
+          >
+            <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+            <span id="series-mode-status" class="void-mode-status">Off</span>
+          </button>
+          <p class="void-mode-hint">Part 1 → 2 → 3 cliffhangers</p>
         </div>
       </div>
 
@@ -394,11 +437,15 @@
         <h2>Your clips</h2>
         <div class="results-header-actions">
           <span id="results-meta" class="results-meta">4 clips · demo</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-labs-btn" title="VOID Labs">Labs</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-history-btn" title="Generation history">History</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="open-favorites-btn" title="Starred clips">Favorites</button>
           <button type="button" class="btn btn-ghost btn-sm" id="copy-all-captions" title="Copy every caption + hashtags">Copy all</button>
           <button type="button" class="btn btn-primary btn-sm" id="regenerate-btn" title="Run generate again on the same link">Regenerate</button>
         </div>
       </div>
-      <p id="results-flow" class="results-flow" hidden>Preview the cut → copy caption or share → download pack (Pro) → tweak style &amp; regenerate</p>
+      <p id="results-flow" class="results-flow" hidden>Preview the cut → A/B hooks &amp; platform captions → checklist → copy / share</p>
+      <div id="batch-groups" class="batch-groups" hidden></div>
       <div id="clips-grid" class="clips-grid aspect-9-16" data-style="viral"></div>
       <div class="hashtag-pack" id="hashtag-pack">
         <div class="hashtag-pack-head">
@@ -415,6 +462,21 @@
         <button type="button" class="btn btn-primary btn-sm" id="copy-export-pack">Copy all captions</button>
       </div>
     </div>
+
+    <!-- VOID Labs — differentiators -->
+    <section id="void-labs" class="void-labs" hidden>
+      <div class="labs-head">
+        <div>
+          <p class="modal-eyebrow">VOID Labs</p>
+          <h2>Creator intel</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="open-voice-btn" title="Brand voice">Brand voice</button>
+      </div>
+      <p class="labs-lead">Pulse, scroll-stop breakdown, comment war kit, thumbnails &amp; share cards — planning tools, not video export.</p>
+      <div id="labs-pulse" class="labs-card"></div>
+      <div id="labs-series" class="labs-card" hidden></div>
+      <div id="labs-war" class="labs-card"></div>
+    </section>
 
     <div class="waitlist" id="waitlist-form-section">
       <h3>Get notified when live AI ships</h3>
@@ -484,7 +546,7 @@
 
       <div class="settings-block">
         <p class="input-label">History</p>
-        <button type="button" class="btn btn-ghost btn-block" id="clear-history-btn">Clear recent links</button>
+        <button type="button" class="btn btn-ghost btn-block" id="clear-history-btn">Clear recent links &amp; gens</button>
       </div>
 
       <div class="settings-block settings-dev">
@@ -733,6 +795,68 @@
       </div>
 
       <button type="button" class="btn btn-ghost btn-block" id="pricing-close" style="margin-top:0.75rem">Close</button>
+    </div>
+  </div>
+
+  <!-- Generation history drawer -->
+  <div id="history-drawer" class="drawer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="history-drawer-title">
+    <div class="drawer-panel">
+      <div class="drawer-head">
+        <div>
+          <p class="modal-eyebrow">Studio</p>
+          <h2 id="history-drawer-title">Generation history</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="history-drawer-close" aria-label="Close">Close</button>
+      </div>
+      <p class="drawer-sub">Reopen a gen, copy the link, or clear everything. Saved on this device only.</p>
+      <div class="drawer-toolbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="clear-gen-history-btn">Clear history</button>
+      </div>
+      <div id="history-list" class="drawer-list"></div>
+      <p id="history-empty" class="drawer-empty" hidden>No generations yet — hit Generate to start a trail.</p>
+    </div>
+  </div>
+
+  <!-- Favorites drawer -->
+  <div id="favorites-drawer" class="drawer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="favorites-drawer-title">
+    <div class="drawer-panel">
+      <div class="drawer-head">
+        <div>
+          <p class="modal-eyebrow">Studio</p>
+          <h2 id="favorites-drawer-title">Favorites</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="favorites-drawer-close" aria-label="Close">Close</button>
+      </div>
+      <p class="drawer-sub">Starred clips for later — copy hooks, captions, or unpin.</p>
+      <div id="favorites-list" class="drawer-list"></div>
+      <p id="favorites-empty" class="drawer-empty" hidden>No favorites yet — tap ★ on a clip card.</p>
+    </div>
+  </div>
+
+  <!-- Brand voice drawer -->
+  <div id="voice-drawer" class="drawer-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="voice-drawer-title">
+    <div class="drawer-panel">
+      <div class="drawer-head">
+        <div>
+          <p class="modal-eyebrow">One-tap brand voice</p>
+          <h2 id="voice-drawer-title">Creator persona</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="voice-drawer-close" aria-label="Close">Close</button>
+      </div>
+      <p class="drawer-sub">Gens rewrite hooks &amp; pin bait in your voice. Stored locally only.</p>
+      <form id="voice-form" class="voice-form">
+        <label class="input-label" for="voice-name">Creator name</label>
+        <input id="voice-name" class="auth-input" type="text" maxlength="40" placeholder="@yourhandle or name" />
+        <label class="input-label" for="voice-vibe">Vibe</label>
+        <input id="voice-vibe" class="auth-input" type="text" maxlength="80" placeholder="cold · sharp · no soft launches" />
+        <label class="input-label" for="voice-banned">Banned words <span class="text-dim">(comma-separated)</span></label>
+        <input id="voice-banned" class="auth-input" type="text" maxlength="120" placeholder="synergy, hustle, grindset" />
+        <div class="drawer-toolbar" style="margin-top:0.85rem">
+          <button type="submit" class="btn btn-primary btn-sm">Save voice</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="voice-clear-btn">Clear</button>
+        </div>
+      </form>
+      <p id="voice-preview" class="voice-preview" hidden></p>
     </div>
   </div>
 

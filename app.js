@@ -277,13 +277,16 @@
   var LOCKOUT_MS = 60 * 1000;
   var MAX_CODE_TRIES = 5;
 
-  var state = { style: "viral", lang: "en", aspect: "9:16", voidMode: true };
+  var state = { style: "viral", lang: "en", aspect: "9:16", voidMode: true, seriesMode: false, batchMode: false };
   var currentUser = null;
   var pendingVerifyEmail = null;
   var pendingVerifyViaApi = false;
   var pendingResetEmail = null;
   var pendingAuthPurpose = "verify"; /* verify | reset */
   var lastClips = [];
+  var lastSourceUrl = "";
+  var lastGenId = null;
+  var batchBusy = false;
   var justSignedIn = false;
   var selectedPlan = "monthly";
 
@@ -2452,8 +2455,10 @@
     clearHistoryBtn.addEventListener("click", function () {
       try {
         localStorage.removeItem(HISTORY_KEY);
+        localStorage.removeItem(GEN_HISTORY_KEY);
       } catch (e) {}
       renderHistory();
+      renderHistoryDrawer();
       showToast("History cleared");
     });
   }
@@ -3980,169 +3985,10 @@
 
   function renderClips(sourceLabel) {
     var clips = buildClipSet();
-    lastClips = clips;
-    clipsGrid.innerHTML = "";
-    applyAspectChrome();
-    applyVoidModeChrome();
-    clipsGrid.setAttribute("data-style", state.style || "viral");
-
-    clips.forEach(function (clip, index) {
-      var titleHtml = escapeHtml(clip.hook);
-      if (clip.hookSv) {
-        titleHtml += '<span class="hook-sv">' + escapeHtml(clip.hookSv) + "</span>";
-      }
-      var burn = overlayCaption(clip);
-      var score = typeof clip.score === "number" ? clip.score : 75;
-      var styleKey = state.style || "viral";
-
-      var card = document.createElement("article");
-      card.className =
-        "clip-card style-" +
-        styleKey +
-        (state.voidMode ? " has-resonance-emphasis" : "");
-      card.setAttribute("data-clip-index", String(index));
-      card.innerHTML =
-        '<div class="clip-thumb ' +
-        escapeHtml(clip.grad || "grad-viral-1") +
-        '" data-vibe="' +
-        escapeHtml(clip.vibe || "") +
-        '">' +
-        '<div class="thumb-safe safe-top" aria-hidden="true"></div>' +
-        '<div class="thumb-safe safe-bottom" aria-hidden="true"></div>' +
-        '<div class="thumb-grain" aria-hidden="true"></div>' +
-        '<div class="thumb-motion" aria-hidden="true"></div>' +
-        '<span class="thumb-platform">' +
-        escapeHtml(sourceLabel || "Shorts") +
-        "</span>" +
-        '<span class="thumb-score" title="VOID Resonance">' +
-        score +
-        "</span>" +
-        (burn
-          ? '<p class="thumb-caption" aria-hidden="true">' + escapeHtml(burn) + "</p>"
-          : "") +
-        '<div class="thumb-progress" aria-hidden="true"><span class="thumb-progress-fill"></span></div>' +
-        playIconSvg() +
-        '<span class="duration">' +
-        escapeHtml(clip.duration || "") +
-        "</span>" +
-        (clip.beat
-          ? '<span class="thumb-beat">' + escapeHtml(clip.beat) + "</span>"
-          : "") +
-        "</div>" +
-        '<div class="clip-body">' +
-        '<div class="clip-rank">Clip ' +
-        (index + 1) +
-        " of 4</div>" +
-        '<h3 class="clip-hook">' +
-        titleHtml +
-        "</h3>" +
-        '<div class="clip-meta">' +
-        "<span>" +
-        escapeHtml(clip.label || "") +
-        "</span>" +
-        '<span class="dot"></span>' +
-        '<span class="aspect-label">' +
-        aspectMetaLabel(state.aspect) +
-        "</span>" +
-        '<span class="dot"></span>' +
-        '<span class="style-chip">' +
-        escapeHtml(styleKey) +
-        "</span>" +
-        "</div>" +
-        resonanceBlockHtml(clip) +
-        '<div class="clip-actions">' +
-        '<button type="button" class="btn btn-ghost btn-sm copy-caption">Copy caption</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm share-clip">Share</button>' +
-        (isOwner() || isPro()
-          ? '<button type="button" class="btn btn-primary btn-sm download-pro" title="Download caption pack">Download</button>'
-          : '<button type="button" class="btn btn-primary btn-sm btn-pro" disabled title="Pro unlocks downloads">Download</button>') +
-        "</div>" +
-        "</div>";
-
-      card.querySelector(".copy-caption").addEventListener("click", function () {
-        var full = captionFor(clip) + "\n\n" + hashtagPack();
-        copyText(full, this);
-        markOnboardStep("copy");
-      });
-
-      var shareBtn = card.querySelector(".share-clip");
-      if (shareBtn) {
-        shareBtn.addEventListener("click", function () {
-          var payload = sharePayload(clip);
-          if (navigator.share) {
-            navigator
-              .share({ title: "VOID Clips", text: payload })
-              .then(function () {
-                showToast("Shared");
-                markOnboardStep("copy");
-              })
-              .catch(function () {
-                copyText(payload, shareBtn, "Copied!");
-                markOnboardStep("copy");
-              });
-          } else {
-            copyText(payload, shareBtn, "Copied!");
-            markOnboardStep("copy");
-          }
-        });
-      }
-
-      var dlBtn = card.querySelector(".download-pro");
-      if (dlBtn) {
-        dlBtn.addEventListener("click", function () {
-          downloadClipPack(clip, index);
-          showToast(isOwner() ? "Owner pack downloaded" : "Pro pack downloaded");
-          markOnboardStep("copy");
-        });
-      }
-
-      var personaBtn = card.querySelector(".copy-persona");
-      if (personaBtn) {
-        personaBtn.addEventListener("click", function () {
-          copyText(clip.persona || "", this, "Copied!");
-          markOnboardStep("copy");
-        });
-      }
-      var pinBtn = card.querySelector(".copy-pin");
-      if (pinBtn) {
-        pinBtn.addEventListener("click", function () {
-          copyText(clip.pin || "", this, "Copied!");
-          markOnboardStep("copy");
-        });
-      }
-
-      /* Preview play pulse on thumb tap */
-      var thumb = card.querySelector(".clip-thumb");
-      if (thumb) {
-        thumb.addEventListener("click", function () {
-          thumb.classList.remove("is-playing");
-          void thumb.offsetWidth;
-          thumb.classList.add("is-playing");
-          showToast("Preview · demo motion");
-        });
-      }
-
-      clipsGrid.appendChild(card);
+    clips.forEach(function (c, i) {
+      enrichClipExtras(c, i);
     });
-
-    var styleLabel = state.style === "viral" ? "Viral" : state.style === "story" ? "Story" : "Funny";
-    var langLabel = state.lang === "both" ? "EN+SV" : state.lang.toUpperCase();
-    resultsMeta.textContent =
-      "4 clips · " +
-      styleLabel +
-      " · " +
-      langLabel +
-      " · " +
-      state.aspect +
-      (state.voidMode ? " · Resonance" : "") +
-      " · demo" +
-      (sourceLabel ? " · " + sourceLabel : "");
-
-    hashtagText.textContent = hashtagPack();
-    setEmptyVisible(false);
-
-    var flow = document.getElementById("results-flow");
-    if (flow) flow.hidden = false;
+    renderClipsFromData(clips, sourceLabel);
   }
 
   function copyAllCaptions(btn) {
@@ -4290,13 +4136,23 @@
     if (url.indexOf("http") !== 0) url = "https://" + url;
     urlInput.value = url;
     updatePasteDetect();
-    pushHistory(url);
     markOnboardStep("paste");
+
+    var batchGroups = document.getElementById("batch-groups");
+    if (batchGroups) {
+      batchGroups.hidden = true;
+      batchGroups.innerHTML = "";
+    }
 
     startLoading(function () {
       consumeCredit();
       bumpStatGens();
-      renderClips(platformFromUrl(url));
+      var clips = buildClipSet();
+      clips.forEach(function (c, i) {
+        enrichClipExtras(c, i);
+      });
+      finishGeneration(url, clips);
+      renderClipsFromData(clips, platformFromUrl(url));
       resultsEl.classList.add("active");
       resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
       markOnboardStep("generate");
@@ -4487,6 +4343,1577 @@
     }
   }
 
+  /* ========== VOID Studio + Labs (creator tools) ========== */
+  var GEN_HISTORY_KEY = "void_clips_gen_history";
+  var FAVORITES_KEY = "void_clips_favorites";
+  var VOICE_KEY = "void_clips_brand_voice";
+  var STREAK_KEY = "void_clips_daily_streak";
+  var MAX_GEN_HISTORY = 15;
+  var MAX_FAVORITES = 40;
+
+  var HOOK_VARIANTS = {
+    viral: {
+      en: [
+        ["Wait — rewind that last second", "The algo buried this. Don't let it."],
+        ["Keep watching if you've ever almost quit", "This is the cut I almost killed."],
+        ["One move. Feed never looks the same.", "Steal this before your niche does."],
+        ["If this feels too accurate… it is.", "POV: the timeline finally snitched."],
+      ],
+      sv: [
+        ["Vänta — spola tillbaka den sista sekunden", "Algon grävde ner det här. Låt den inte."],
+        ["Fortsätt om du nästan gett upp", "Det här klippet höll jag på att döda."],
+        ["Ett drag. Feeden ser aldrig likadan ut.", "Stjäl innan din nisch gör det."],
+        ["Om det känns för träffande… det är det.", "POV: tidslinjen skvallrade äntligen."],
+      ],
+    },
+    story: {
+      en: [
+        ["I shouldn't have opened that thread", "Cold open: one notification ruined sleep."],
+        ["This is where it got quiet for real", "The beat before everything flipped."],
+        ["They cut this line from the story", "The part nobody warned you about."],
+        ["Credits roll. I'm already gone.", "Sequel bait — if Part 1 hit."],
+      ],
+      sv: [
+        ["Jag borde inte öppnat den tråden", "Cold open: en notis förstörde sömnen."],
+        ["Här blev det tyst på riktigt", "Takten innan allt vände."],
+        ["De klippte den här raden ur storyn", "Delen ingen varnade dig för."],
+        ["Credits. Jag är redan borta.", "Sequel-bete — om del 1 tog."],
+      ],
+    },
+    funny: {
+      en: [
+        ["Say it louder for the people in denial", "No notes. Just chaos."],
+        ["Brain.exe has stopped responding", "HR called. We ignored it."],
+        ["Speedrun: how plans die", "0.4s of confidence, then ruins."],
+        ["Warning: may cause secondhand cringe", "Mute if you're soft. Match if you're not."],
+      ],
+      sv: [
+        ["Säg det högre för de i förnekelse", "Inga notes. Bara kaos."],
+        ["Hjärna.exe har slutat svara", "HR ringde. Vi ignorerade."],
+        ["Speedrun: hur planer dör", "0,4s självförtroende, sen ruiner."],
+        ["Varning: kan ge secondhand-cringe", "Mute om du är mjuk. Matcha om inte."],
+      ],
+    },
+  };
+
+  var PLATFORM_META = {
+    tiktok: { label: "TikTok", hint: "Punchy · ~150 chars" },
+    shorts: { label: "YT Shorts", hint: "Clear · searchable" },
+    reels: { label: "IG Reels", hint: "Aesthetic · save-bait" },
+  };
+
+  var THUMB_WORDS = {
+    viral: { en: [["WAIT FOR IT", "DON'T SKIP", "STOLEN CUT"], ["ALMOST DELETED", "REWIND", "FEED CHECK"], ["ONE MOVE", "SAVE THIS", "ALGO BAIT"], ["TOO REAL", "POV", "CAUGHT"]],
+      sv: [["VÄNTA", "SKIPPA INTE", "RÅKLIPP"], ["NÄSTAN RADERAD", "SPOLA", "FEED-CHECK"], ["ETT DRAG", "SPARA", "ALGO-BETE"], ["FÖR RIKTIGT", "POV", "PÅKOMEN"]] },
+    story: { en: [["PART 1", "DON'T OPEN", "THE THREAD"], ["THEN…", "IT GOT QUIET", "ESCALATE"], ["THE CUT", "NO WARNING", "REVEAL"], ["END.", "WALKED OUT", "SEQUEL?"]],
+      sv: [["DEL 1", "ÖPPNA INTE", "TRÅDEN"], ["SEN…", "DET BLEV TYST", "UPPBYGGNAD"], ["KLIPPET", "INGEN VARNING", "REVEAL"], ["SLUT.", "GICK", "DEL 2?"]] },
+    funny: { en: [["NO FILTER", "WHOLE CHEST", "SAY IT"], ["3AM BRAIN", "NO HR", "CHAOS"], ["0.4s PLAN", "FAIL EDIT", "RUINS"], ["MUTE?", "WARNING", "CRINGE"]],
+      sv: [["INGEN FILTER", "HELA BRÖSTET", "SÄG DET"], ["03:00", "INGEN HR", "KAOS"], ["0,4s PLAN", "FAIL", "RUINER"], ["MUTE?", "VARNING", "CRINGE"]] },
+  };
+
+  function emptyChecklist() {
+    return { hook: false, caption: false, hashtags: false, pinComment: false, thumbnail: false };
+  }
+
+  function uid(prefix) {
+    return (prefix || "id") + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+  }
+
+  function loadJson(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveJson(key, val) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) {}
+  }
+
+  function getBrandVoice() {
+    var v = loadJson(VOICE_KEY, null);
+    if (!v || typeof v !== "object") return { name: "", vibe: "", banned: [] };
+    return {
+      name: String(v.name || "").trim(),
+      vibe: String(v.vibe || "").trim(),
+      banned: Array.isArray(v.banned)
+        ? v.banned
+        : String(v.banned || "")
+            .split(",")
+            .map(function (s) {
+              return s.trim();
+            })
+            .filter(Boolean),
+    };
+  }
+
+  function saveBrandVoice(v) {
+    saveJson(VOICE_KEY, {
+      name: (v.name || "").trim(),
+      vibe: (v.vibe || "").trim(),
+      banned: (v.banned || [])
+        .map(function (s) {
+          return String(s).trim();
+        })
+        .filter(Boolean),
+    });
+  }
+
+  function applyVoiceToText(text) {
+    if (!text) return text;
+    var voice = getBrandVoice();
+    var out = String(text);
+    (voice.banned || []).forEach(function (w) {
+      if (!w) return;
+      try {
+        var re = new RegExp("\\b" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
+        out = out.replace(re, "—");
+      } catch (e) {}
+    });
+    if (voice.name && out.indexOf("@V_O_I_.D") !== -1) {
+      out = out.replace(/@V_O_I_\.D/g, voice.name.indexOf("@") === 0 ? voice.name : "@" + voice.name.replace(/^@/, ""));
+    }
+    return out;
+  }
+
+  function voicePrefix() {
+    var voice = getBrandVoice();
+    if (!voice.vibe) return "";
+    return "[" + voice.vibe + "] ";
+  }
+
+  function getStreak() {
+    return loadJson(STREAK_KEY, { count: 0, lastDay: "" });
+  }
+
+  function dayKeyLocal() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function bumpStreak() {
+    var s = getStreak();
+    var today = dayKeyLocal();
+    if (s.lastDay === today) {
+      updateStreakUI();
+      return s;
+    }
+    var y = new Date();
+    y.setDate(y.getDate() - 1);
+    var yKey = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+    if (s.lastDay === yKey) s.count = (s.count || 0) + 1;
+    else s.count = 1;
+    s.lastDay = today;
+    saveJson(STREAK_KEY, s);
+    updateStreakUI();
+    var flair =
+      s.count >= 7
+        ? "Weekly VOID — " + s.count + " day streak"
+        : s.count >= 3
+          ? "Streak ×" + s.count + " — keep the void lit"
+          : "Daily VOID logged · day " + s.count;
+    showToast(flair);
+    return s;
+  }
+
+  function updateStreakUI() {
+    var el = document.getElementById("streak-pill");
+    if (!el) return;
+    var s = getStreak();
+    if (!s.count) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.textContent = "🔥 " + s.count;
+    el.title = "Daily VOID streak · " + s.count + " day" + (s.count === 1 ? "" : "s");
+  }
+
+  function getGenHistory() {
+    var list = loadJson(GEN_HISTORY_KEY, []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  function pushGenHistory(entry) {
+    var list = getGenHistory().filter(function (g) {
+      return g && g.id !== entry.id;
+    });
+    list.unshift(entry);
+    if (list.length > MAX_GEN_HISTORY) list = list.slice(0, MAX_GEN_HISTORY);
+    saveJson(GEN_HISTORY_KEY, list);
+  }
+
+  function updateGenChecklist(genId, clipIndex, checklist) {
+    var list = getGenHistory();
+    var changed = false;
+    list.forEach(function (g) {
+      if (g.id !== genId) return;
+      if (!g.checklists) g.checklists = {};
+      g.checklists[String(clipIndex)] = checklist;
+      changed = true;
+    });
+    if (changed) saveJson(GEN_HISTORY_KEY, list);
+  }
+
+  function getFavorites() {
+    var list = loadJson(FAVORITES_KEY, []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  function favKeyFor(clip, sourceUrl) {
+    return (sourceUrl || "") + "::" + (clip.hook || "") + "::" + (clip.label || "");
+  }
+
+  function isFavorited(clip, sourceUrl) {
+    var key = favKeyFor(clip, sourceUrl);
+    return getFavorites().some(function (f) {
+      return f.key === key;
+    });
+  }
+
+  function toggleFavorite(clip, sourceUrl) {
+    var key = favKeyFor(clip, sourceUrl);
+    var list = getFavorites();
+    var idx = -1;
+    list.forEach(function (f, i) {
+      if (f.key === key) idx = i;
+    });
+    if (idx >= 0) {
+      list.splice(idx, 1);
+      saveJson(FAVORITES_KEY, list);
+      showToast("Removed from favorites");
+      return false;
+    }
+    list.unshift({
+      key: key,
+      id: uid("fav"),
+      hook: clip.hook,
+      caption: clip.caption,
+      score: clip.score,
+      pin: clip.pin,
+      label: clip.label,
+      sourceUrl: sourceUrl || lastSourceUrl || "",
+      style: state.style,
+      timestamp: Date.now(),
+      platforms: clip.platforms || null,
+    });
+    if (list.length > MAX_FAVORITES) list = list.slice(0, MAX_FAVORITES);
+    saveJson(FAVORITES_KEY, list);
+    showToast("Starred · Favorites");
+    return true;
+  }
+
+  function clampScore(n) {
+    return Math.max(40, Math.min(99, Math.round(n)));
+  }
+
+  function buildScrollStop(clip, index) {
+    var base = typeof clip.score === "number" ? clip.score : 75;
+    var wobble = ((index * 7 + (clip.hook || "").length) % 9) - 4;
+    return {
+      hook: clampScore(base + 4 + wobble),
+      payoff: clampScore(base - 2 - wobble * 0.5),
+      curiosity: clampScore(base + 1 + (index % 3) * 2),
+      shareability: clampScore(base - 5 + (index % 2) * 4),
+    };
+  }
+
+  function buildHookVariants(clip, index) {
+    var langKey = state.lang === "sv" ? "sv" : "en";
+    var pack = (HOOK_VARIANTS[state.style] || HOOK_VARIANTS.viral)[langKey] || [];
+    var alts = pack[index] || pack[0] || ["Alt hook A", "Alt hook B"];
+    var variants = [clip.hook].concat(alts).slice(0, 3);
+    return variants.map(function (h, i) {
+      return { id: String.fromCharCode(65 + i), text: applyVoiceToText(voicePrefix() && i > 0 ? h : h) };
+    });
+  }
+
+  function buildPlatformPacks(clip) {
+    var hook = applyVoiceToText(clip.hook || "");
+    var tags = hashtagPack();
+    var shortTags = tags.split(" ").slice(0, 5).join(" ");
+    var tiktok = hook.length > 120 ? hook.slice(0, 117) + "…" : hook;
+    tiktok = tiktok + "\n\n" + shortTags;
+    var shorts =
+      hook +
+      "\n\nWatch to the end — then tell me the second it flipped.\n\n" +
+      tags;
+    var reels =
+      "✨ " +
+      hook +
+      "\n\nSave this for later. Soft launches don't survive here.\n\n" +
+      shortTags +
+      " #reels";
+    if (state.lang === "sv") {
+      shorts =
+        hook +
+        "\n\nTitta till slutet — säg vilken sekund det vände.\n\n" +
+        tags;
+      reels =
+        "✨ " +
+        hook +
+        "\n\nSpara till senare. Mjuka starter överlever inte här.\n\n" +
+        shortTags +
+        " #reels";
+    }
+    return {
+      tiktok: { caption: tiktok, hint: PLATFORM_META.tiktok.hint },
+      shorts: { caption: shorts, hint: PLATFORM_META.shorts.hint },
+      reels: { caption: reels, hint: PLATFORM_META.reels.hint },
+    };
+  }
+
+  function buildCommentWar(clip) {
+    var pin = applyVoiceToText(clip.pin || "Drop your take.");
+    var sv = state.lang === "sv";
+    var pins = sv
+      ? [
+          pin,
+          "Pin: tidsstämpla sekunden det vände. Inga mjuka svar.",
+          "Första kommentaren vinner — säg vilken del som bröt dig.",
+          "Del 2 om detta tar 1k. Kommentera VOID om du är kvar.",
+          "Tagga den som fortfarande scrollar förbi guld.",
+        ]
+      : [
+          pin,
+          "Pin: timestamp the second it flipped. No soft replies.",
+          "First comment wins — which beat broke you?",
+          "Part 2 if this hits 1k. Comment VOID if you're still here.",
+          "Tag the one who still scrolls past gold.",
+        ];
+    var replies = sv
+      ? [
+          "Du märkte X? De flesta missar det.",
+          "Säg emot mig i svaren — jag läser allt.",
+          "Om du bara gillar: du är tyst. Om du kommenterar: du är kvar.",
+        ]
+      : [
+          "You caught X? Most people miss it.",
+          "Disagree in the replies — I read all of them.",
+          "Likes are quiet. Comments mean you're still in the room.",
+        ];
+    return { pins: pins.slice(0, 5), replies: replies.slice(0, 3) };
+  }
+
+  function buildThumbTexts(clip, index) {
+    var langKey = state.lang === "sv" ? "sv" : "en";
+    var pack = (THUMB_WORDS[state.style] || THUMB_WORDS.viral)[langKey] || [];
+    var words = pack[index] || pack[0] || ["HOOK", "WATCH", "NOW"];
+    return words.slice(0, 3);
+  }
+
+  function buildSeriesPack(url) {
+    var sv = state.lang === "sv";
+    var base = shortUrl(url || lastSourceUrl || "your cut");
+    if (sv) {
+      return [
+        {
+          part: 1,
+          hook: "Del 1 — jag borde stängt av innan det här",
+          caption: "DEL 1 · CLIFF",
+          beat: "Cold open · cliff :28",
+          note: "Avsluta mitt i spänningen. CTA: del 2 imorgon.",
+        },
+        {
+          part: 2,
+          hook: "Del 2 — det som hände efter tystnaden",
+          caption: "DEL 2 · VÄNDNING",
+          beat: "Payoff tease · new question",
+          note: "Betala lite, öppna större hål. CTA: finalen snart.",
+        },
+        {
+          part: 3,
+          hook: "Del 3 — sista klippet från " + base,
+          caption: "FINAL",
+          beat: "Full payoff · sequel bait",
+          note: "Stäng loopen. Soft-CTA till nästa serie.",
+        },
+      ];
+    }
+    return [
+      {
+        part: 1,
+        hook: "Part 1 — I should've stopped before this",
+        caption: "PART 1 · CLIFF",
+        beat: "Cold open · cliff :28",
+        note: "End mid-tension. CTA: Part 2 drops next.",
+      },
+      {
+        part: 2,
+        hook: "Part 2 — what happened after the silence",
+        caption: "PART 2 · TURN",
+        beat: "Payoff tease · new question",
+        note: "Pay a little, open a bigger hole. CTA: finale soon.",
+      },
+      {
+        part: 3,
+        hook: "Part 3 — the last cut from " + base,
+        caption: "FINAL",
+        beat: "Full payoff · sequel bait",
+        note: "Close the loop. Soft-CTA into the next series.",
+      },
+    ];
+  }
+
+  function detectNicheTags(url, clips) {
+    var blob = ((url || "") + " " + (clips || [])
+      .map(function (c) {
+        return (c.hook || "") + " " + (c.label || "") + " " + (c.vibe || "");
+      })
+      .join(" ")).toLowerCase();
+    var tags = [];
+    if (/story|part|message|silence|reveal/.test(blob)) tags.push("storytime");
+    if (/funny|fail|chaos|meme|brain|mute/.test(blob)) tags.push("comedy");
+    if (/pov|viral|hook|algo|feed|save/.test(blob)) tags.push("viral");
+    if (/tiktok/.test(blob)) tags.push("tiktok");
+    if (/youtube|youtu\.be/.test(blob)) tags.push("youtube");
+    if (!tags.length) tags.push(state.style || "viral");
+    if (state.style && tags.indexOf(state.style) === -1) tags.push(state.style);
+    return tags.slice(0, 4);
+  }
+
+  function buildPulse(url, clips) {
+    var tags = detectNicheTags(url, clips);
+    var niche = tags[0] || "viral";
+    /* Heuristic windows — demo planning aid, not live analytics */
+    var seEu =
+      niche === "comedy"
+        ? { label: "SE / EU", windows: ["17:30–19:00", "21:00–22:30"], best: "18:15 CET" }
+        : niche === "storytime"
+          ? { label: "SE / EU", windows: ["07:30–08:30", "20:00–21:30"], best: "20:40 CET" }
+          : { label: "SE / EU", windows: ["12:00–13:00", "18:00–20:00"], best: "19:10 CET" };
+    var us =
+      niche === "comedy"
+        ? { label: "US", windows: ["11:00–13:00 ET", "19:00–21:00 ET"], best: "12:20 ET" }
+        : niche === "storytime"
+          ? { label: "US", windows: ["07:00–08:00 ET", "21:00–22:30 ET"], best: "21:35 ET" }
+          : { label: "US", windows: ["09:00–10:30 ET", "18:30–20:00 ET"], best: "19:05 ET" };
+    var bars = [
+      { name: seEu.best, pct: 92 },
+      { name: seEu.windows[0], pct: 74 },
+      { name: us.best, pct: 88 },
+      { name: us.windows[0], pct: 71 },
+    ];
+    return { tags: tags, seEu: seEu, us: us, bars: bars, niche: niche };
+  }
+
+  function enrichClipExtras(clip, index) {
+    clip.id = clip.id || uid("clip");
+    clip.hookVariants = buildHookVariants(clip, index);
+    clip.platforms = buildPlatformPacks(clip);
+    clip.scrollStop = buildScrollStop(clip, index);
+    clip.commentWar = buildCommentWar(clip);
+    clip.thumbTexts = buildThumbTexts(clip, index);
+    clip.checklist = clip.checklist || emptyChecklist();
+    if (clip.persona) clip.persona = applyVoiceToText(clip.persona);
+    if (clip.pin) clip.pin = applyVoiceToText(clip.pin);
+    return clip;
+  }
+
+  function openDrawer(el) {
+    if (!el) return;
+    el.hidden = false;
+    document.body.classList.add("drawer-open");
+  }
+
+  function closeDrawer(el) {
+    if (!el) return;
+    el.hidden = true;
+    if (!document.querySelector(".drawer-overlay:not([hidden])")) {
+      document.body.classList.remove("drawer-open");
+    }
+  }
+
+  function formatGenTime(ts) {
+    try {
+      return new Date(ts).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function avgResonance(clips) {
+    if (!clips || !clips.length) return 0;
+    var sum = 0;
+    clips.forEach(function (c) {
+      sum += typeof c.score === "number" ? c.score : 75;
+    });
+    return Math.round(sum / clips.length);
+  }
+
+  function renderHistoryDrawer() {
+    var listEl = document.getElementById("history-list");
+    var emptyEl = document.getElementById("history-empty");
+    if (!listEl) return;
+    var list = getGenHistory();
+    listEl.innerHTML = "";
+    if (!list.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+    list.forEach(function (g) {
+      var row = document.createElement("article");
+      row.className = "drawer-item";
+      var avg = typeof g.resonance === "number" ? g.resonance : avgResonance(g.clips);
+      row.innerHTML =
+        '<div class="drawer-item-main">' +
+        '<p class="drawer-item-title">' +
+        escapeHtml(shortUrl(g.url || "")) +
+        "</p>" +
+        '<p class="drawer-item-meta">' +
+        escapeHtml(formatGenTime(g.timestamp)) +
+        " · " +
+        escapeHtml((g.style || "viral") + "") +
+        " · Resonance " +
+        avg +
+        (g.series ? " · Series" : "") +
+        "</p>" +
+        "</div>" +
+        '<div class="drawer-item-actions">' +
+        '<button type="button" class="btn btn-ghost btn-xs hist-open">Open</button>' +
+        '<button type="button" class="btn btn-ghost btn-xs hist-copy">Copy link</button>' +
+        "</div>";
+      row.querySelector(".hist-open").addEventListener("click", function () {
+        reopenGeneration(g);
+      });
+      row.querySelector(".hist-copy").addEventListener("click", function () {
+        copyText(g.url || "", this, "Copied!");
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  function renderFavoritesDrawer() {
+    var listEl = document.getElementById("favorites-list");
+    var emptyEl = document.getElementById("favorites-empty");
+    if (!listEl) return;
+    var list = getFavorites();
+    listEl.innerHTML = "";
+    if (!list.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+    list.forEach(function (f) {
+      var row = document.createElement("article");
+      row.className = "drawer-item";
+      row.innerHTML =
+        '<div class="drawer-item-main">' +
+        '<p class="drawer-item-title">' +
+        escapeHtml(f.hook || "") +
+        "</p>" +
+        '<p class="drawer-item-meta">' +
+        escapeHtml(f.label || "") +
+        (typeof f.score === "number" ? " · " + f.score : "") +
+        (f.sourceUrl ? " · " + shortUrl(f.sourceUrl) : "") +
+        "</p>" +
+        "</div>" +
+        '<div class="drawer-item-actions">' +
+        '<button type="button" class="btn btn-ghost btn-xs fav-copy">Copy</button>' +
+        '<button type="button" class="btn btn-ghost btn-xs fav-unpin">Unpin</button>' +
+        "</div>";
+      row.querySelector(".fav-copy").addEventListener("click", function () {
+        copyText((f.hook || "") + "\n\n" + (f.pin || ""), this, "Copied!");
+      });
+      row.querySelector(".fav-unpin").addEventListener("click", function () {
+        var next = getFavorites().filter(function (x) {
+          return x.id !== f.id;
+        });
+        saveJson(FAVORITES_KEY, next);
+        renderFavoritesDrawer();
+        showToast("Unpinned");
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  function reopenGeneration(g) {
+    if (!g) return;
+    if (g.style && CLIPS[g.style]) state.style = g.style;
+    if (g.lang) state.lang = g.lang;
+    if (g.aspect) state.aspect = g.aspect;
+    if (typeof g.voidMode === "boolean") state.voidMode = g.voidMode;
+    if (typeof g.series === "boolean") state.seriesMode = g.series;
+    syncSegmented();
+    applySeriesChrome();
+    applyVoidModeChrome();
+    if (urlInput) urlInput.value = g.url || "";
+    updatePasteDetect();
+    lastClips = (g.clips || []).map(function (c, i) {
+      var clip = Object.assign({}, c);
+      if (g.checklists && g.checklists[String(i)]) clip.checklist = g.checklists[String(i)];
+      return enrichClipExtras(clip, i);
+    });
+    lastSourceUrl = g.url || "";
+    lastGenId = g.id;
+    var batchGroups = document.getElementById("batch-groups");
+    if (batchGroups) {
+      batchGroups.hidden = true;
+      batchGroups.innerHTML = "";
+    }
+    renderClipsFromData(lastClips, platformFromUrl(g.url));
+    renderVoidLabs(g.url, lastClips);
+    resultsEl.classList.add("active");
+    setEmptyVisible(false);
+    closeDrawer(document.getElementById("history-drawer"));
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("Reopened generation");
+  }
+
+  function scrollStopHtml(ss) {
+    if (!ss) return "";
+    var keys = [
+      { k: "hook", label: "Hook" },
+      { k: "payoff", label: "Payoff" },
+      { k: "curiosity", label: "Curiosity" },
+      { k: "shareability", label: "Share" },
+    ];
+    var bars = keys
+      .map(function (item) {
+        var v = ss[item.k] || 70;
+        return (
+          '<div class="ss-row">' +
+          '<span class="ss-label">' +
+          item.label +
+          "</span>" +
+          '<div class="ss-meter"><div class="ss-fill" style="width:' +
+          v +
+          '%"></div></div>' +
+          '<span class="ss-val">' +
+          v +
+          "</span>" +
+          "</div>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="scroll-stop-block">' +
+      '<div class="creator-block-head"><span class="creator-block-label">Scroll-stop breakdown</span></div>' +
+      bars +
+      "</div>"
+    );
+  }
+
+  function creatorToolsHtml(clip, index) {
+    var variants = clip.hookVariants || [];
+    var variantRows = variants
+      .map(function (v) {
+        return (
+          '<div class="ab-row">' +
+          '<span class="ab-badge">' +
+          escapeHtml(v.id) +
+          "</span>" +
+          '<p class="ab-text">' +
+          escapeHtml(v.text) +
+          "</p>" +
+          '<button type="button" class="btn btn-ghost btn-xs copy-ab" data-ab="' +
+          escapeHtml(v.id) +
+          '">Copy</button>' +
+          "</div>"
+        );
+      })
+      .join("");
+
+    var platChips = ["tiktok", "shorts", "reels"]
+      .map(function (k, i) {
+        return (
+          '<button type="button" class="plat-chip' +
+          (i === 0 ? " is-active" : "") +
+          '" data-plat="' +
+          k +
+          '">' +
+          escapeHtml(PLATFORM_META[k].label) +
+          "</button>"
+        );
+      })
+      .join("");
+
+    var firstPlat = (clip.platforms && clip.platforms.tiktok) || { caption: "", hint: "" };
+    var thumbs = (clip.thumbTexts || [])
+      .map(function (t) {
+        return (
+          '<button type="button" class="thumb-idea copy-thumb-idea">' +
+          '<span class="thumb-idea-text">' +
+          escapeHtml(t) +
+          "</span>" +
+          "<span class=\"thumb-idea-copy\">Copy</span></button>"
+        );
+      })
+      .join("");
+
+    var cl = clip.checklist || emptyChecklist();
+    var checks = [
+      { k: "hook", label: "Hook locked" },
+      { k: "caption", label: "Caption pasted" },
+      { k: "hashtags", label: "Hashtags ready" },
+      { k: "pinComment", label: "Pin comment set" },
+      { k: "thumbnail", label: "Thumbnail note" },
+    ]
+      .map(function (c) {
+        return (
+          '<label class="post-check">' +
+          '<input type="checkbox" data-check="' +
+          c.k +
+          '"' +
+          (cl[c.k] ? " checked" : "") +
+          " />" +
+          "<span>" +
+          c.label +
+          "</span></label>"
+        );
+      })
+      .join("");
+
+    return (
+      '<div class="creator-tools" data-creator-tools>' +
+      '<div class="creator-tabs" role="tablist">' +
+      '<button type="button" class="creator-tab is-active" data-ctab="hooks">Hooks A/B</button>' +
+      '<button type="button" class="creator-tab" data-ctab="platforms">Platforms</button>' +
+      '<button type="button" class="creator-tab" data-ctab="post">Post</button>' +
+      "</div>" +
+      '<div class="creator-panel is-active" data-cpanel="hooks">' +
+      '<p class="creator-hint">A/B test these · one-tap copy</p>' +
+      variantRows +
+      "</div>" +
+      '<div class="creator-panel" data-cpanel="platforms" hidden>' +
+      '<div class="plat-chips">' +
+      platChips +
+      "</div>" +
+      '<p class="plat-hint">' +
+      escapeHtml(firstPlat.hint || "") +
+      "</p>" +
+      '<p class="plat-caption" data-plat-caption>' +
+      escapeHtml(firstPlat.caption || "") +
+      "</p>" +
+      '<button type="button" class="btn btn-ghost btn-xs copy-plat">Copy caption</button>' +
+      "</div>" +
+      '<div class="creator-panel" data-cpanel="post" hidden>' +
+      '<div class="post-check-list">' +
+      checks +
+      "</div>" +
+      '<p class="creator-hint" style="margin-top:0.65rem">Thumbnail text</p>' +
+      '<div class="thumb-ideas">' +
+      thumbs +
+      "</div>" +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  function wireCreatorTools(card, clip, index) {
+    var root = card.querySelector("[data-creator-tools]");
+    if (!root) return;
+
+    root.querySelectorAll(".creator-tab").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var id = tab.getAttribute("data-ctab");
+        root.querySelectorAll(".creator-tab").forEach(function (t) {
+          t.classList.toggle("is-active", t === tab);
+        });
+        root.querySelectorAll(".creator-panel").forEach(function (p) {
+          var on = p.getAttribute("data-cpanel") === id;
+          p.hidden = !on;
+          p.classList.toggle("is-active", on);
+        });
+      });
+    });
+
+    root.querySelectorAll(".copy-ab").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-ab");
+        var v = (clip.hookVariants || []).find(function (x) {
+          return x.id === id;
+        });
+        copyText((v && v.text) || "", btn, "Copied!");
+        markOnboardStep("copy");
+      });
+    });
+
+    var platCaption = root.querySelector("[data-plat-caption]");
+    var platHint = root.querySelector(".plat-hint");
+    var activePlat = "tiktok";
+    root.querySelectorAll(".plat-chip").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        activePlat = chip.getAttribute("data-plat");
+        root.querySelectorAll(".plat-chip").forEach(function (c) {
+          c.classList.toggle("is-active", c === chip);
+        });
+        var pack = (clip.platforms && clip.platforms[activePlat]) || {};
+        if (platCaption) platCaption.textContent = pack.caption || "";
+        if (platHint) platHint.textContent = pack.hint || "";
+      });
+    });
+    var copyPlat = root.querySelector(".copy-plat");
+    if (copyPlat) {
+      copyPlat.addEventListener("click", function () {
+        var pack = (clip.platforms && clip.platforms[activePlat]) || {};
+        copyText(pack.caption || "", copyPlat, "Copied!");
+        markOnboardStep("copy");
+      });
+    }
+
+    root.querySelectorAll(".copy-thumb-idea").forEach(function (btn, i) {
+      btn.addEventListener("click", function () {
+        copyText((clip.thumbTexts && clip.thumbTexts[i]) || btn.querySelector(".thumb-idea-text").textContent, btn, "Copied!");
+      });
+    });
+
+    root.querySelectorAll(".post-check input").forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (!clip.checklist) clip.checklist = emptyChecklist();
+        clip.checklist[input.getAttribute("data-check")] = !!input.checked;
+        if (lastGenId) updateGenChecklist(lastGenId, index, clip.checklist);
+      });
+    });
+  }
+
+  function renderClipsFromData(clips, sourceLabel) {
+    lastClips = clips;
+    clipsGrid.innerHTML = "";
+    applyAspectChrome();
+    applyVoidModeChrome();
+    clipsGrid.setAttribute("data-style", state.style || "viral");
+
+    clips.forEach(function (clip, index) {
+      var titleHtml = escapeHtml(clip.hook);
+      if (clip.hookSv) {
+        titleHtml += '<span class="hook-sv">' + escapeHtml(clip.hookSv) + "</span>";
+      }
+      var burn = overlayCaption(clip);
+      var score = typeof clip.score === "number" ? clip.score : 75;
+      var styleKey = state.style || "viral";
+      var favOn = isFavorited(clip, lastSourceUrl);
+
+      var card = document.createElement("article");
+      card.className =
+        "clip-card style-" + styleKey + (state.voidMode ? " has-resonance-emphasis" : "");
+      card.setAttribute("data-clip-index", String(index));
+      card.innerHTML =
+        '<div class="clip-thumb ' +
+        escapeHtml(clip.grad || "grad-viral-1") +
+        '" data-vibe="' +
+        escapeHtml(clip.vibe || "") +
+        '">' +
+        '<div class="thumb-safe safe-top" aria-hidden="true"></div>' +
+        '<div class="thumb-safe safe-bottom" aria-hidden="true"></div>' +
+        '<div class="thumb-grain" aria-hidden="true"></div>' +
+        '<div class="thumb-motion" aria-hidden="true"></div>' +
+        '<span class="thumb-platform">' +
+        escapeHtml(sourceLabel || "Shorts") +
+        "</span>" +
+        '<span class="thumb-score" title="VOID Resonance">' +
+        score +
+        "</span>" +
+        '<button type="button" class="fav-star' +
+        (favOn ? " is-on" : "") +
+        '" title="Favorite" aria-label="Favorite" aria-pressed="' +
+        (favOn ? "true" : "false") +
+        '">★</button>' +
+        (burn ? '<p class="thumb-caption" aria-hidden="true">' + escapeHtml(burn) + "</p>" : "") +
+        '<div class="thumb-progress" aria-hidden="true"><span class="thumb-progress-fill"></span></div>' +
+        playIconSvg() +
+        '<span class="duration">' +
+        escapeHtml(clip.duration || "") +
+        "</span>" +
+        (clip.beat ? '<span class="thumb-beat">' + escapeHtml(clip.beat) + "</span>" : "") +
+        "</div>" +
+        '<div class="clip-body">' +
+        '<div class="clip-rank">Clip ' +
+        (index + 1) +
+        " of " +
+        clips.length +
+        "</div>" +
+        '<h3 class="clip-hook">' +
+        titleHtml +
+        "</h3>" +
+        '<div class="clip-meta">' +
+        "<span>" +
+        escapeHtml(clip.label || "") +
+        "</span>" +
+        '<span class="dot"></span>' +
+        '<span class="aspect-label">' +
+        aspectMetaLabel(state.aspect) +
+        "</span>" +
+        '<span class="dot"></span>' +
+        '<span class="style-chip">' +
+        escapeHtml(styleKey) +
+        "</span>" +
+        "</div>" +
+        resonanceBlockHtml(clip) +
+        scrollStopHtml(clip.scrollStop) +
+        creatorToolsHtml(clip, index) +
+        '<div class="clip-actions">' +
+        '<button type="button" class="btn btn-ghost btn-sm copy-caption">Copy caption</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm share-clip">Share</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm share-card-btn" title="PNG share card">Share card</button>' +
+        (isOwner() || isPro()
+          ? '<button type="button" class="btn btn-primary btn-sm download-pro" title="Download caption pack">Download</button>'
+          : '<button type="button" class="btn btn-primary btn-sm btn-pro" disabled title="Pro unlocks downloads">Download</button>') +
+        "</div>" +
+        "</div>";
+
+      card.querySelector(".copy-caption").addEventListener("click", function () {
+        var full = captionFor(clip) + "\n\n" + hashtagPack();
+        copyText(full, this);
+        markOnboardStep("copy");
+      });
+
+      var shareBtn = card.querySelector(".share-clip");
+      if (shareBtn) {
+        shareBtn.addEventListener("click", function () {
+          var payload = sharePayload(clip);
+          if (navigator.share) {
+            navigator
+              .share({ title: "VOID Clips", text: payload })
+              .then(function () {
+                showToast("Shared");
+                markOnboardStep("copy");
+              })
+              .catch(function () {
+                copyText(payload, shareBtn, "Copied!");
+                markOnboardStep("copy");
+              });
+          } else {
+            copyText(payload, shareBtn, "Copied!");
+            markOnboardStep("copy");
+          }
+        });
+      }
+
+      var dlBtn = card.querySelector(".download-pro");
+      if (dlBtn) {
+        dlBtn.addEventListener("click", function () {
+          downloadClipPack(clip, index);
+          showToast(isOwner() ? "Owner pack downloaded" : "Pro pack downloaded");
+          markOnboardStep("copy");
+        });
+      }
+
+      var personaBtn = card.querySelector(".copy-persona");
+      if (personaBtn) {
+        personaBtn.addEventListener("click", function () {
+          copyText(clip.persona || "", this, "Copied!");
+          markOnboardStep("copy");
+        });
+      }
+      var pinBtn = card.querySelector(".copy-pin");
+      if (pinBtn) {
+        pinBtn.addEventListener("click", function () {
+          copyText(clip.pin || "", this, "Copied!");
+          markOnboardStep("copy");
+        });
+      }
+
+      var favBtn = card.querySelector(".fav-star");
+      if (favBtn) {
+        favBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var on = toggleFavorite(clip, lastSourceUrl);
+          favBtn.classList.toggle("is-on", on);
+          favBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+      }
+
+      var shareCardBtn = card.querySelector(".share-card-btn");
+      if (shareCardBtn) {
+        shareCardBtn.addEventListener("click", function () {
+          exportShareCard(clip, index);
+        });
+      }
+
+      var thumb = card.querySelector(".clip-thumb");
+      if (thumb) {
+        thumb.addEventListener("click", function (e) {
+          if (e.target.closest(".fav-star")) return;
+          thumb.classList.remove("is-playing");
+          void thumb.offsetWidth;
+          thumb.classList.add("is-playing");
+          showToast("Preview · demo motion");
+        });
+      }
+
+      wireCreatorTools(card, clip, index);
+      clipsGrid.appendChild(card);
+    });
+
+    var styleLabel = state.style === "viral" ? "Viral" : state.style === "story" ? "Story" : "Funny";
+    var langLabel = state.lang === "both" ? "EN+SV" : state.lang.toUpperCase();
+    resultsMeta.textContent =
+      clips.length +
+      " clips · " +
+      styleLabel +
+      " · " +
+      langLabel +
+      " · " +
+      state.aspect +
+      (state.voidMode ? " · Resonance" : "") +
+      (state.seriesMode ? " · Series" : "") +
+      " · demo" +
+      (sourceLabel ? " · " + sourceLabel : "");
+
+    hashtagText.textContent = hashtagPack();
+    setEmptyVisible(false);
+    var flow = document.getElementById("results-flow");
+    if (flow) flow.hidden = false;
+  }
+
+  function exportShareCard(clip, index) {
+    var canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1920;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      showToast("Canvas unavailable");
+      return;
+    }
+    var grd = ctx.createLinearGradient(0, 0, 1080, 1920);
+    grd.addColorStop(0, "#0a0614");
+    grd.addColorStop(0.45, "#1a0b2e");
+    grd.addColorStop(1, "#050506");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    ctx.fillStyle = "rgba(139,92,246,0.35)";
+    ctx.beginPath();
+    ctx.arc(900, 280, 220, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(196,181,253,0.12)";
+    ctx.beginPath();
+    ctx.arc(180, 1600, 280, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#c4b5fd";
+    ctx.font = "700 36px Space Grotesk, system-ui, sans-serif";
+    ctx.fillText("VOID CLIPS", 80, 140);
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.font = "500 28px Space Grotesk, system-ui, sans-serif";
+    ctx.fillText("Resonance " + (clip.score || 75) + "/100", 80, 190);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 64px Space Grotesk, system-ui, sans-serif";
+    wrapCanvasText(ctx, clip.hook || "Untitled hook", 80, 520, 920, 76);
+
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "500 30px Space Grotesk, system-ui, sans-serif";
+    ctx.fillText((clip.label || "Clip") + " · " + (state.style || "viral"), 80, 1680);
+    ctx.fillText("@V_O_I_.D", 80, 1735);
+
+    canvas.toBlob(function (blob) {
+      if (!blob) {
+        showToast("Could not export card");
+        return;
+      }
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "void-share-card-" + (index + 1) + ".png";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 800);
+      showToast("Share card PNG saved");
+    }, "image/png");
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    var words = String(text).split(" ");
+    var line = "";
+    var yy = y;
+    for (var n = 0; n < words.length; n++) {
+      var test = line + words[n] + " ";
+      if (ctx.measureText(test).width > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x, yy);
+        line = words[n] + " ";
+        yy += lineHeight;
+        if (yy > y + lineHeight * 6) break;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line.trim(), x, yy);
+  }
+
+  function renderVoidLabs(url, clips) {
+    var labs = document.getElementById("void-labs");
+    if (!labs) return;
+    labs.hidden = false;
+    var pulse = buildPulse(url, clips);
+    var pulseEl = document.getElementById("labs-pulse");
+    if (pulseEl) {
+      pulseEl.innerHTML =
+        '<div class="labs-card-head"><span class="labs-card-title">VOID Pulse</span><span class="labs-card-tag">' +
+        escapeHtml(pulse.niche) +
+        "</span></div>" +
+        '<p class="labs-card-sub">Best-time heuristic for ' +
+        escapeHtml(pulse.tags.join(" · ")) +
+        " — planning aid, not live analytics.</p>" +
+        '<div class="pulse-grid">' +
+        '<div class="pulse-region"><p class="pulse-region-label">' +
+        escapeHtml(pulse.seEu.label) +
+        '</p><p class="pulse-best">' +
+        escapeHtml(pulse.seEu.best) +
+        '</p><p class="pulse-windows">' +
+        escapeHtml(pulse.seEu.windows.join(" · ")) +
+        "</p></div>" +
+        '<div class="pulse-region"><p class="pulse-region-label">' +
+        escapeHtml(pulse.us.label) +
+        '</p><p class="pulse-best">' +
+        escapeHtml(pulse.us.best) +
+        '</p><p class="pulse-windows">' +
+        escapeHtml(pulse.us.windows.join(" · ")) +
+        "</p></div></div>" +
+        '<div class="pulse-bars">' +
+        pulse.bars
+          .map(function (b) {
+            return (
+              '<div class="pulse-bar-row"><span>' +
+              escapeHtml(b.name) +
+              '</span><div class="pulse-bar"><i style="width:' +
+              b.pct +
+              '%"></i></div></div>'
+            );
+          })
+          .join("") +
+        "</div>";
+    }
+
+    var seriesEl = document.getElementById("labs-series");
+    if (seriesEl) {
+      if (state.seriesMode) {
+        seriesEl.hidden = false;
+        var series = buildSeriesPack(url);
+        seriesEl.innerHTML =
+          '<div class="labs-card-head"><span class="labs-card-title">Series mode</span><span class="labs-card-tag">3-part</span></div>' +
+          '<p class="labs-card-sub">Cliffhanger ladder from one source — film yourself, we plan the drops.</p>' +
+          series
+            .map(function (p) {
+              return (
+                '<div class="series-row">' +
+                '<span class="series-part">P' +
+                p.part +
+                "</span>" +
+                '<div class="series-body"><p class="series-hook">' +
+                escapeHtml(p.hook) +
+                '</p><p class="series-meta">' +
+                escapeHtml(p.caption) +
+                " · " +
+                escapeHtml(p.beat) +
+                '</p><p class="series-note">' +
+                escapeHtml(p.note) +
+                '</p></div>' +
+                '<button type="button" class="btn btn-ghost btn-xs copy-series" data-part="' +
+                p.part +
+                '">Copy</button></div>'
+              );
+            })
+            .join("");
+        seriesEl.querySelectorAll(".copy-series").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var part = Number(btn.getAttribute("data-part"));
+            var p = series.find(function (x) {
+              return x.part === part;
+            });
+            if (!p) return;
+            copyText(p.hook + "\n" + p.caption + "\n" + p.note, btn, "Copied!");
+          });
+        });
+      } else {
+        seriesEl.hidden = true;
+        seriesEl.innerHTML = "";
+      }
+    }
+
+    var warEl = document.getElementById("labs-war");
+    var top = (clips && clips[0]) || null;
+    if (warEl && top && top.commentWar) {
+      var war = top.commentWar;
+      warEl.innerHTML =
+        '<div class="labs-card-head"><span class="labs-card-title">Comment war kit</span><span class="labs-card-tag">Clip 1</span></div>' +
+        '<p class="labs-card-sub">5 pin variants + 3 reply baits — farm the thread, not the algorithm gods.</p>' +
+        '<p class="creator-hint">Pinned variants</p>' +
+        war.pins
+          .map(function (t, i) {
+            return (
+              '<div class="war-line"><span class="ab-badge">' +
+              (i + 1) +
+              '</span><p>' +
+              escapeHtml(t) +
+              '</p><button type="button" class="btn btn-ghost btn-xs copy-war-pin" data-i="' +
+              i +
+              '">Copy</button></div>'
+            );
+          })
+          .join("") +
+        '<p class="creator-hint" style="margin-top:0.75rem">Reply bait</p>' +
+        war.replies
+          .map(function (t, i) {
+            return (
+              '<div class="war-line"><span class="ab-badge">R' +
+              (i + 1) +
+              '</span><p>' +
+              escapeHtml(t) +
+              '</p><button type="button" class="btn btn-ghost btn-xs copy-war-reply" data-i="' +
+              i +
+              '">Copy</button></div>'
+            );
+          })
+          .join("");
+      warEl.querySelectorAll(".copy-war-pin").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          copyText(war.pins[Number(btn.getAttribute("data-i"))] || "", btn, "Copied!");
+        });
+      });
+      warEl.querySelectorAll(".copy-war-reply").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          copyText(war.replies[Number(btn.getAttribute("data-i"))] || "", btn, "Copied!");
+        });
+      });
+    }
+  }
+
+  function applySeriesChrome() {
+    var toggle = document.getElementById("series-mode-toggle");
+    if (toggle) {
+      toggle.setAttribute("aria-checked", state.seriesMode ? "true" : "false");
+      toggle.classList.toggle("is-on", !!state.seriesMode);
+    }
+    var status = document.getElementById("series-mode-status");
+    if (status) status.textContent = state.seriesMode ? "On" : "Off";
+  }
+
+  function parseBatchUrls(raw) {
+    return String(raw || "")
+      .split(/[\n,]+/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean)
+      .map(function (u) {
+        return u.indexOf("http") === 0 ? u : "https://" + u;
+      })
+      .filter(function (u) {
+        return isLikelyUrl(u);
+      });
+  }
+
+  function creditsRemaining() {
+    if (!currentUser) return 0;
+    if (isOwner() || isPro()) return Infinity;
+    return typeof currentUser.credits === "number" ? currentUser.credits : 0;
+  }
+
+  function finishGeneration(url, clips) {
+    lastSourceUrl = url;
+    lastGenId = uid("gen");
+    var entry = {
+      id: lastGenId,
+      url: url,
+      style: state.style,
+      lang: state.lang,
+      aspect: state.aspect,
+      voidMode: !!state.voidMode,
+      series: !!state.seriesMode,
+      timestamp: Date.now(),
+      clips: clips,
+      resonance: avgResonance(clips),
+      checklists: {},
+    };
+    clips.forEach(function (c, i) {
+      entry.checklists[String(i)] = c.checklist || emptyChecklist();
+    });
+    pushGenHistory(entry);
+    pushHistory(url);
+    bumpStreak();
+    renderVoidLabs(url, clips);
+  }
+
+  function runSingleGenerate(url, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      startLoading(function () {
+        consumeCredit();
+        bumpStatGens();
+        var clips = buildClipSet();
+        clips.forEach(function (c, i) {
+          enrichClipExtras(c, i);
+        });
+        if (!opts.skipHistory) finishGeneration(url, clips);
+        else {
+          lastSourceUrl = url;
+          bumpStreak();
+        }
+        resolve({ url: url, clips: clips });
+      });
+    });
+  }
+
+  function renderBatchGroups(groups) {
+    var wrap = document.getElementById("batch-groups");
+    if (!wrap) return;
+    wrap.hidden = false;
+    wrap.innerHTML = "";
+    clipsGrid.innerHTML = "";
+    groups.forEach(function (g, gi) {
+      var section = document.createElement("section");
+      section.className = "batch-group";
+      section.innerHTML =
+        '<div class="batch-group-head"><h3>' +
+        escapeHtml(shortUrl(g.url)) +
+        '</h3><span class="results-meta">' +
+        g.clips.length +
+        " clips · " +
+        escapeHtml(platformFromUrl(g.url)) +
+        '</span></div><div class="clips-grid aspect-9-16 batch-group-grid" data-style="' +
+        escapeHtml(state.style || "viral") +
+        '"></div>';
+      wrap.appendChild(section);
+      var grid = section.querySelector(".batch-group-grid");
+      var savedGrid = clipsGrid;
+      /* temporarily point renderer — use lightweight cards */
+      g.clips.forEach(function (clip, index) {
+        var mini = document.createElement("article");
+        mini.className = "clip-card style-" + (state.style || "viral");
+        mini.innerHTML =
+          '<div class="clip-body" style="padding-top:1rem">' +
+          '<div class="clip-rank">Clip ' +
+          (index + 1) +
+          " · Resonance " +
+          (clip.score || 75) +
+          "</div>" +
+          '<h3 class="clip-hook">' +
+          escapeHtml(clip.hook) +
+          "</h3>" +
+          '<div class="clip-actions">' +
+          '<button type="button" class="btn btn-ghost btn-sm batch-copy">Copy</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm batch-focus">Open full</button>' +
+          "</div></div>";
+        mini.querySelector(".batch-copy").addEventListener("click", function () {
+          copyText(captionFor(clip) + "\n\n" + hashtagPack(), this);
+        });
+        mini.querySelector(".batch-focus").addEventListener("click", function () {
+          wrap.hidden = true;
+          lastSourceUrl = g.url;
+          if (urlInput) urlInput.value = g.url;
+          renderClipsFromData(g.clips, platformFromUrl(g.url));
+          renderVoidLabs(g.url, g.clips);
+          showToast("Focused · " + shortUrl(g.url));
+        });
+        grid.appendChild(mini);
+      });
+      void savedGrid;
+      void gi;
+    });
+    if (groups.length) {
+      lastClips = groups[0].clips;
+      lastSourceUrl = groups[0].url;
+      renderVoidLabs(groups[0].url, groups[0].clips);
+    }
+    resultsMeta.textContent = groups.length + " sources · batch · demo";
+    hashtagText.textContent = hashtagPack();
+    setEmptyVisible(false);
+    var flow = document.getElementById("results-flow");
+    if (flow) flow.hidden = false;
+  }
+
+  async function runBatchGenerate() {
+    if (batchBusy) return;
+    var urls = parseBatchUrls((document.getElementById("batch-url-input") || {}).value);
+    if (!urls.length) {
+      showToast("Paste at least one valid link");
+      return;
+    }
+    if (!currentUser || !currentUser.verified) {
+      showAuthGate();
+      return;
+    }
+    var remain = creditsRemaining();
+    if (!isOwner() && !isPro() && remain <= 0) {
+      updateCreditsUI();
+      showToast("No free generations left");
+      return;
+    }
+    var maxN = isOwner() || isPro() ? urls.length : Math.min(urls.length, remain);
+    if (maxN < urls.length) {
+      showToast("Generating " + maxN + " of " + urls.length + " (credits)");
+    }
+    batchBusy = true;
+    var groups = [];
+    var i;
+    for (i = 0; i < maxN; i++) {
+      var url = urls[i];
+      /* sequential demo loads */
+      var result = await runSingleGenerate(url, { skipHistory: false });
+      groups.push(result);
+      if (urlInput) urlInput.value = url;
+    }
+    batchBusy = false;
+    resultsEl.classList.add("active");
+    renderBatchGroups(groups);
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    markOnboardStep("generate");
+    showToast("Batch done · " + groups.length + " source" + (groups.length === 1 ? "" : "s"));
+  }
+
+  function syncVoiceForm() {
+    var v = getBrandVoice();
+    var n = document.getElementById("voice-name");
+    var vibe = document.getElementById("voice-vibe");
+    var ban = document.getElementById("voice-banned");
+    if (n) n.value = v.name || "";
+    if (vibe) vibe.value = v.vibe || "";
+    if (ban) ban.value = (v.banned || []).join(", ");
+    var prev = document.getElementById("voice-preview");
+    if (prev) {
+      if (v.name || v.vibe) {
+        prev.hidden = false;
+        prev.textContent = "Active · " + (v.name || "unnamed") + (v.vibe ? " · " + v.vibe : "");
+      } else {
+        prev.hidden = true;
+      }
+    }
+  }
+
+  function wireStudioUI() {
+    updateStreakUI();
+    applySeriesChrome();
+    syncVoiceForm();
+
+    function bindOpen(id, drawerId, renderFn) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener("click", function () {
+        if (renderFn) renderFn();
+        openDrawer(document.getElementById(drawerId));
+      });
+    }
+    bindOpen("open-history-btn", "history-drawer", renderHistoryDrawer);
+    bindOpen("open-history-btn-top", "history-drawer", renderHistoryDrawer);
+    bindOpen("open-favorites-btn", "favorites-drawer", renderFavoritesDrawer);
+    bindOpen("open-favorites-btn-top", "favorites-drawer", renderFavoritesDrawer);
+    bindOpen("open-voice-btn", "voice-drawer", syncVoiceForm);
+    bindOpen("open-labs-btn", null, function () {
+      var labs = document.getElementById("void-labs");
+      if (labs) {
+        labs.hidden = false;
+        labs.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else showToast("Generate first to unlock Labs");
+    });
+    bindOpen("open-labs-btn-top", null, function () {
+      var labs = document.getElementById("void-labs");
+      if (labs && !labs.hidden) labs.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (lastClips.length) {
+        renderVoidLabs(lastSourceUrl, lastClips);
+        document.getElementById("void-labs").scrollIntoView({ behavior: "smooth", block: "start" });
+      } else showToast("Generate first to unlock Labs");
+    });
+
+    ["history-drawer", "favorites-drawer", "voice-drawer"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("click", function (e) {
+        if (e.target === el) closeDrawer(el);
+      });
+      var closeBtn = document.getElementById(id.replace("-drawer", "-drawer-close"));
+      /* ids are history-drawer-close etc */
+    });
+    var hdc = document.getElementById("history-drawer-close");
+    if (hdc) hdc.addEventListener("click", function () { closeDrawer(document.getElementById("history-drawer")); });
+    var fdc = document.getElementById("favorites-drawer-close");
+    if (fdc) fdc.addEventListener("click", function () { closeDrawer(document.getElementById("favorites-drawer")); });
+    var vdc = document.getElementById("voice-drawer-close");
+    if (vdc) vdc.addEventListener("click", function () { closeDrawer(document.getElementById("voice-drawer")); });
+
+    var clearGen = document.getElementById("clear-gen-history-btn");
+    if (clearGen) {
+      clearGen.addEventListener("click", function () {
+        try {
+          localStorage.removeItem(GEN_HISTORY_KEY);
+        } catch (e) {}
+        renderHistoryDrawer();
+        showToast("Generation history cleared");
+      });
+    }
+
+    var batchToggle = document.getElementById("batch-toggle");
+    var singleRow = document.getElementById("single-url-row");
+    var batchRow = document.getElementById("batch-url-row");
+    var batchInput = document.getElementById("batch-url-input");
+    var batchCount = document.getElementById("batch-count");
+    var batchGenBtn = document.getElementById("batch-generate-btn");
+    if (batchToggle) {
+      batchToggle.addEventListener("click", function () {
+        state.batchMode = !state.batchMode;
+        batchToggle.setAttribute("aria-pressed", state.batchMode ? "true" : "false");
+        batchToggle.classList.toggle("is-on", state.batchMode);
+        if (singleRow) singleRow.hidden = !!state.batchMode;
+        if (batchRow) batchRow.hidden = !state.batchMode;
+        if (state.batchMode && batchInput) batchInput.focus();
+      });
+    }
+    function refreshBatchCount() {
+      if (!batchCount || !batchInput) return;
+      var n = parseBatchUrls(batchInput.value).length;
+      batchCount.textContent = n + " link" + (n === 1 ? "" : "s");
+    }
+    if (batchInput) {
+      batchInput.addEventListener("input", refreshBatchCount);
+    }
+    if (batchGenBtn) batchGenBtn.addEventListener("click", function () { runBatchGenerate(); });
+
+    var seriesToggle = document.getElementById("series-mode-toggle");
+    if (seriesToggle) {
+      seriesToggle.addEventListener("click", function () {
+        state.seriesMode = !state.seriesMode;
+        applySeriesChrome();
+        showToast(state.seriesMode ? "Series mode on — 3-part ladder in Labs" : "Series mode off");
+        if (lastClips.length) renderVoidLabs(lastSourceUrl, lastClips);
+      });
+    }
+
+    var voiceForm = document.getElementById("voice-form");
+    if (voiceForm) {
+      voiceForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var banned = (document.getElementById("voice-banned").value || "")
+          .split(",")
+          .map(function (s) { return s.trim(); })
+          .filter(Boolean);
+        saveBrandVoice({
+          name: document.getElementById("voice-name").value,
+          vibe: document.getElementById("voice-vibe").value,
+          banned: banned,
+        });
+        syncVoiceForm();
+        showToast("Brand voice saved");
+        if (lastClips.length) {
+          lastClips.forEach(function (c, i) { enrichClipExtras(c, i); });
+          renderClipsFromData(lastClips, platformFromUrl(lastSourceUrl));
+          renderVoidLabs(lastSourceUrl, lastClips);
+        }
+      });
+    }
+    var voiceClear = document.getElementById("voice-clear-btn");
+    if (voiceClear) {
+      voiceClear.addEventListener("click", function () {
+        try { localStorage.removeItem(VOICE_KEY); } catch (e) {}
+        syncVoiceForm();
+        showToast("Brand voice cleared");
+      });
+    }
+  }
+
+
   /* —— init —— */
   if (authRemember && preferRememberDevice()) {
     authRemember.checked = true;
@@ -4498,7 +5925,9 @@
   loadPrefs();
   syncSegmented();
   applyVoidModeChrome();
+  applySeriesChrome();
   renderHistory();
+  wireStudioUI();
   setEmptyVisible(true);
   updatePasteDetect();
   initBetaBanner();
