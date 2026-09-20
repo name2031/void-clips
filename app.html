@@ -301,6 +301,25 @@
         </div>
         <button id="generate-btn" class="btn btn-primary" type="button">Generate</button>
       </div>
+      <div id="link-preview" class="link-preview" hidden aria-live="polite">
+        <div class="link-preview-skel" hidden>
+          <div class="link-preview-skel-thumb shimmer"></div>
+          <div class="link-preview-skel-meta">
+            <div class="shimmer skel-line skel-line-lg"></div>
+            <div class="shimmer skel-line skel-line-sm"></div>
+          </div>
+        </div>
+        <div class="link-preview-card" hidden>
+          <div class="link-preview-thumb-wrap">
+            <img id="link-preview-img" class="link-preview-img" alt="" width="160" height="90" decoding="async" />
+          </div>
+          <div class="link-preview-meta">
+            <span id="link-preview-badge" class="link-preview-badge"></span>
+            <p id="link-preview-title" class="link-preview-title"></p>
+            <p id="link-preview-sub" class="link-preview-sub">Source preview</p>
+          </div>
+        </div>
+      </div>
       <div id="batch-url-row" class="batch-url-row" hidden>
         <label class="input-label" for="batch-url-input">Batch links</label>
         <textarea
@@ -310,6 +329,7 @@
           placeholder="Paste multiple YouTube / TikTok links — one per line or comma-separated"
           spellcheck="false"
         ></textarea>
+        <div id="batch-link-previews" class="batch-link-previews" hidden aria-live="polite"></div>
         <div class="batch-actions">
           <span id="batch-count" class="batch-count">0 links</span>
           <button id="batch-generate-btn" class="btn btn-primary" type="button">Generate batch</button>

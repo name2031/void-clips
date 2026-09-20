@@ -19,7 +19,7 @@
  *   npm start                 # from repo root
  *   node server/index.js
  *
- * Auth: X-Void-Api-Secret required for /api/* except health/pricing/webhook.
+ * Auth: X-Void-Api-Secret required for /api/* except health/pricing/webhook/site-config/oembed.
  * Localhost may omit the header (same-origin convenience). Public hosts must
  * send the secret; HTML pages served by this process inject
  * window.__VOID_API_SECRET__ (never baked into static zip/files on disk).
@@ -1084,6 +1084,108 @@ app.post("/api/swish/reject", requireOwner, function (req, res) {
   } catch (e) {
     console.error("[swish/reject]", e.message || e);
     return res.status(500).json({ ok: false, error: "Could not reject" });
+  }
+});
+
+
+/* —— Public oEmbed proxy (YouTube / TikTok thumbnails + titles) —— */
+function youtubeIdFromUrl(raw) {
+  try {
+    var u = new URL(String(raw || "").trim().indexOf("http") === 0 ? String(raw).trim() : "https://" + String(raw).trim());
+    var host = (u.hostname || "").replace(/^www\./, "").toLowerCase();
+    if (host === "youtu.be") {
+      return (u.pathname || "/").slice(1).split("/")[0] || null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+      if (u.searchParams.get("v")) return u.searchParams.get("v");
+      var m = (u.pathname || "").match(/\/(?:shorts|embed|live|v)\/([^/?#]+)/);
+      if (m) return m[1];
+    }
+  } catch (e) {}
+  return null;
+}
+
+function detectOembedProvider(raw) {
+  var lower = String(raw || "").toLowerCase();
+  if (/youtube\.com|youtu\.be/.test(lower)) return "youtube";
+  if (/tiktok\.com/.test(lower)) return "tiktok";
+  return null;
+}
+
+function youtubeThumbFromId(id) {
+  if (!id) return "";
+  return "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+}
+
+app.get("/api/oembed", async function (req, res) {
+  var raw = String((req.query && req.query.url) || "").trim();
+  if (!raw) {
+    return res.status(400).json({ ok: false, error: "url required" });
+  }
+  if (raw.indexOf("http") !== 0) raw = "https://" + raw;
+
+  var provider = detectOembedProvider(raw);
+  if (!provider) {
+    return res.status(400).json({ ok: false, error: "Only YouTube and TikTok URLs are supported" });
+  }
+
+  var ytId = provider === "youtube" ? youtubeIdFromUrl(raw) : null;
+  var oembedEndpoint =
+    provider === "youtube"
+      ? "https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent(raw)
+      : "https://www.tiktok.com/oembed?url=" + encodeURIComponent(raw);
+
+  try {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () {
+      try {
+        ctrl.abort();
+      } catch (e) {}
+    }, 8000);
+    var r = await fetch(oembedEndpoint, {
+      headers: {
+        "User-Agent": "VOID-Clips/1.0 (+https://voidclips.app)",
+        Accept: "application/json",
+      },
+      signal: ctrl.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timer);
+
+    if (r.ok) {
+      var data = await r.json();
+      return res.json({
+        ok: true,
+        title: String((data && data.title) || "").slice(0, 300),
+        thumbnail: String((data && data.thumbnail_url) || youtubeThumbFromId(ytId) || "").slice(0, 500),
+        provider: provider === "youtube" ? "YouTube" : "TikTok",
+      });
+    }
+
+    if (provider === "youtube" && ytId) {
+      return res.json({
+        ok: true,
+        title: "",
+        thumbnail: youtubeThumbFromId(ytId),
+        provider: "YouTube",
+      });
+    }
+    return res.status(502).json({
+      ok: false,
+      error: "oEmbed upstream failed",
+      provider: provider === "youtube" ? "YouTube" : "TikTok",
+    });
+  } catch (e) {
+    if (provider === "youtube" && ytId) {
+      return res.json({
+        ok: true,
+        title: "",
+        thumbnail: youtubeThumbFromId(ytId),
+        provider: "YouTube",
+      });
+    }
+    console.error("[oembed]", e.message || e);
+    return res.status(502).json({ ok: false, error: "oEmbed fetch failed" });
   }
 });
 
