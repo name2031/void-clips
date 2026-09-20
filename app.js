@@ -1418,7 +1418,6 @@
     if (signedIn) {
       if (authGate) {
         authGate.hidden = true;
-        authGate.classList.remove("is-modal");
       }
       if (appMain && (!ownerPanel || ownerPanel.hidden)) appMain.hidden = false;
       updateCreditsUI();
@@ -1461,7 +1460,7 @@
         ? "Unlimited owner credits"
         : pro
           ? "Pro — unlimited gens this period"
-          : "Free demo generations left";
+          : "Free generations left";
     }
     if (navUser) navUser.hidden = false;
     if (userNameEl) userNameEl.textContent = displayName(currentUser.email || currentUser.identity);
@@ -1505,7 +1504,6 @@
     if (ownerPanel) ownerPanel.hidden = true;
     if (authGate) {
       authGate.hidden = false;
-      authGate.classList.remove("is-modal");
     }
     if (appMain) appMain.hidden = true;
     if (navCredits) navCredits.hidden = true;
@@ -1532,7 +1530,12 @@
     if (authTitle) authTitle.textContent = "Welcome to VOID";
     if (authSub) {
       authSub.innerHTML =
-        'Sign in or create an account to generate clips. <strong>10 free gens</strong> on first sign-in · email verify required.';
+        'Sign in or create an account to generate clips. <strong>10 free gens</strong> on first sign-in.';
+    }
+    var trust = document.getElementById("auth-trust");
+    if (trust) {
+      trust.hidden = false;
+      trust.textContent = "Gmail verify · 10 free gens · No guest generate";
     }
     if (authError) {
       authError.hidden = true;
@@ -1553,8 +1556,10 @@
     if (authVerifyPanel) authVerifyPanel.hidden = false;
     if (authTitle) authTitle.textContent = "Verify your email";
     if (authSub) {
-      authSub.textContent = "Enter the 6-digit code to unlock the app. Max " + MAX_CODE_TRIES + " tries.";
+      authSub.textContent = "Enter the 6-digit code to unlock the studio. Max " + MAX_CODE_TRIES + " tries.";
     }
+    var trustV = document.getElementById("auth-trust");
+    if (trustV) trustV.hidden = true;
     if (verifyEmailLabel) verifyEmailLabel.textContent = pendingVerifyEmail;
     if (verifyError) {
       verifyError.hidden = true;
@@ -1592,12 +1597,14 @@
     if (authSub) {
       authSub.textContent = "Send a 6-digit code, then choose a new strong password. Max " + MAX_CODE_TRIES + " code tries.";
     }
+    var trustF = document.getElementById("auth-trust");
+    if (trustF) trustF.hidden = true;
     if (forgotEmailForm) forgotEmailForm.hidden = false;
     if (forgotResetForm) forgotResetForm.hidden = true;
     if (forgotResendBtn) forgotResendBtn.hidden = true;
     if (forgotLead) {
       forgotLead.innerHTML =
-        'Enter your email. We’ll send a <strong>6-digit reset code</strong> (same as verify — demo fallback shows the code).';
+        'Enter your email. We’ll send a <strong>6-digit reset code</strong> (Gmail when Resend is live; otherwise an on-screen code).';
     }
     setForgotError("");
     setForgotResetError("");
@@ -1931,8 +1938,13 @@
     if (sub) {
       sub.innerHTML =
         authMode === "signup"
-          ? "Create an account with email + strong password, then verify with a 6-digit code."
-          : "Sign in with your email and password. New here? Use <strong>Create account</strong>.";
+          ? "Email + strong password, then Gmail verify. <strong>10 free gens</strong> on first sign-in."
+          : "Sign in to open the studio. New here? Use <strong>Create account</strong> — 10 free gens.";
+    }
+    var trustEl = document.getElementById("auth-trust");
+    if (trustEl) {
+      trustEl.hidden = false;
+      trustEl.textContent = "Gmail verify · 10 free gens · No guest generate";
     }
     setAuthError("");
     if (typeof updatePasswordHint === "function") updatePasswordHint();
@@ -6308,7 +6320,7 @@
           thumb.classList.remove("is-playing");
           void thumb.offsetWidth;
           thumb.classList.add("is-playing");
-          showToast("Preview · demo motion");
+          showToast("Preview · sample motion");
         });
       }
 
@@ -6328,7 +6340,7 @@
       state.aspect +
       (state.voidMode ? " · Resonance" : "") +
       (state.seriesMode ? " · Series" : "") +
-      " · demo" +
+      " · sample" +
       (sourceLabel ? " · " + sourceLabel : "");
 
     hashtagText.textContent = hashtagPack();
@@ -6707,7 +6719,7 @@
       lastSourceUrl = groups[0].url;
       renderVoidLabs(groups[0].url, groups[0].clips);
     }
-    resultsMeta.textContent = groups.length + " sources · batch · demo";
+    resultsMeta.textContent = groups.length + " sources · batch · sample";
     hashtagText.textContent = hashtagPack();
     setEmptyVisible(false);
     var flow = document.getElementById("results-flow");

@@ -4,20 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>App — VOID Clips</title>
-  <meta name="description" content="VOID Clips app — paste a YouTube or TikTok link, generate demo viral clips with captions &amp; hashtags. 10 free gens. Pro via Stripe or Swish. By @V_O_I_.D." />
+  <meta name="description" content="VOID Clips studio — sign in or create an account, paste a YouTube or TikTok link, generate viral clip cards with captions &amp; hashtags. 10 free gens on first sign-in. Pro via Stripe or Swish. By @V_O_I_.D." />
   <meta name="author" content="Yuel (@V_O_I_.D)" />
   <meta name="theme-color" content="#050506" />
   <meta name="robots" content="index, follow" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="VOID Clips" />
   <meta property="og:title" content="App — VOID Clips" />
-  <meta property="og:description" content="Paste a link → demo viral clips out. 10 free gens. Captions, hashtags, EN/SV. Built by @V_O_I_.D." />
+  <meta property="og:description" content="Sign in to generate. Paste a link → viral clip cards out. 10 free gens on first sign-in. Captions, hashtags, EN/SV. Built by @V_O_I_.D." />
   <meta property="og:url" content="https://void-clips-production.up.railway.app/app.html" />
   <meta property="og:image" content="https://void-clips-production.up.railway.app/assets/pfp.png" />
   <link rel="canonical" href="https://void-clips-production.up.railway.app/app.html" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="App — VOID Clips" />
-  <meta name="twitter:description" content="Paste a link → demo viral clips. 10 free gens. Pro via card or Swish. By @V_O_I_.D." />
+  <meta name="twitter:description" content="Sign in to generate. Paste a link → viral clip cards. 10 free gens on first sign-in. Pro via card or Swish. By @V_O_I_.D." />
   <meta name="twitter:image" content="https://void-clips-production.up.railway.app/assets/pfp.png" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23050506'/%3E%3Ccircle cx='16' cy='16' r='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23c4b5fd'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,7 +32,7 @@
   <!-- Shown only for file:// — http/https (incl. PUBLIC_BASE) is OK -->
   <div id="origin-banner" class="origin-banner" hidden role="status">
     <div class="container origin-banner-inner">
-      <span class="origin-banner-text"><strong>Wrong open URL</strong> — open the live site (or local server), not <code>file://</code>. Demo codes only on this origin.</span>
+      <span class="origin-banner-text"><strong>Wrong open URL</strong> — open the live site (or local server), not <code>file://</code>. On-screen verify codes only on this origin.</span>
       <button type="button" id="origin-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss">Dismiss</button>
     </div>
   </div>
@@ -40,7 +40,7 @@
   <!-- Soft launch banner -->
   <div id="beta-banner" class="beta-banner" hidden role="status">
     <div class="container beta-banner-inner">
-      <span class="beta-banner-text"><strong>Live</strong> — public demo. Real Gmail verify when Resend is configured.</span>
+      <span class="beta-banner-text"><strong>Live</strong> — Sign in required. Real Gmail verify when Resend is configured · 10 free gens on first sign-in.</span>
       <button type="button" id="beta-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss banner">Dismiss</button>
     </div>
   </div>
@@ -75,7 +75,7 @@
       </a>
       <ul class="nav-links">
         <li id="nav-credits" class="nav-credits" hidden>
-          <span id="credits-pill" class="credits-pill" title="Free demo generations left">—</span>
+          <span id="credits-pill" class="credits-pill" title="Free generations left">—</span>
         </li>
         <li id="nav-pro-badge" class="nav-pro-badge" hidden>
           <span class="pro-badge" title="Pro entitlement active">Pro</span>
@@ -100,7 +100,7 @@
     </div>
   </nav>
 
-  <!-- Auth gate (localStorage accounts · password + Gmail verify via local server · demo fallback) -->
+  <!-- Auth gate (localStorage accounts · password + Gmail verify · fallback codes) -->
   <div id="auth-gate" class="auth-gate" hidden>
     <div class="auth-card">
       <div class="auth-mark" aria-hidden="true">
@@ -108,8 +108,13 @@
           <img class="logo-img" src="assets/pfp.png" alt="" onload="this.parentElement.classList.add('has-img')" onerror="this.hidden=true" />
         </span>
       </div>
+      <p class="auth-who">
+        <span class="auth-who-name">Yuel</span>
+        <a class="auth-who-handle" href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer">@V_O_I_.D</a>
+      </p>
       <h1 id="auth-title">Welcome to VOID</h1>
-      <p class="auth-sub" id="auth-sub">Sign in or create an account to generate clips. <strong>10 free gens</strong> on first sign-in · email verify required.</p>
+      <p class="auth-sub" id="auth-sub">Sign in or create an account to generate clips. <strong>10 free gens</strong> on first sign-in.</p>
+      <p class="auth-trust" id="auth-trust">Gmail verify · 10 free gens · No guest generate</p>
 
       <div id="auth-signin-panel">
         <div class="auth-tabs" role="tablist" aria-label="Account">
@@ -166,7 +171,7 @@
       </div>
 
       <div id="auth-forgot-panel" class="auth-forgot-panel" hidden>
-        <p class="auth-verify-lead" id="forgot-lead">Enter your email. We’ll send a <strong>6-digit reset code</strong> (same as verify — demo fallback shows the code).</p>
+        <p class="auth-verify-lead" id="forgot-lead">Enter your email. We’ll send a <strong>6-digit reset code</strong> (Gmail when Resend is live; otherwise an on-screen code).</p>
         <form id="forgot-email-form" class="auth-form">
           <label class="input-label" for="forgot-email">Email</label>
           <input
@@ -248,11 +253,11 @@
           <button type="button" class="btn btn-ghost btn-block" id="send-code-btn">Resend verification code</button>
           <button type="button" class="btn btn-ghost btn-block" id="verify-back-btn">Back to sign in</button>
         </div>
-        <p class="auth-note" id="verify-api-note">Prefers real email via local server. Demo fallback only if API unavailable (see warning).</p>
+        <p class="auth-note" id="verify-api-note">Prefers real Gmail via the server. On-screen code only if the API is unavailable (see warning).</p>
         <p id="verify-demo-warn" class="auth-warn" hidden role="status">Not secure — start server for real Gmail</p>
       </div>
 
-      <p class="auth-note" id="auth-footer-note">Salted SHA-256 · session · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="privacy.html#help">Help</a></p>
+      <p class="auth-note" id="auth-footer-note">Account required · salted SHA-256 · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="privacy.html#help">Help</a></p>
     </div>
   </div>
 
@@ -282,7 +287,7 @@
   <main id="app-main" class="container app-wrap" hidden>
     <div class="app-header">
       <div class="app-header-top">
-        <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
+        <div class="demo-badge" title="Sample UX — no live video processing">● SAMPLE UX</div>
         <div class="studio-quick">
           <span id="streak-pill" class="streak-pill" hidden title="Daily VOID streak">🔥 0</span>
           <button type="button" class="btn btn-ghost btn-sm" id="open-labs-btn-top" title="VOID Labs">Labs</button>
@@ -414,7 +419,7 @@
       <div class="platform-hints">
         <span class="chip">YouTube</span>
         <span class="chip">TikTok</span>
-        <span class="chip">Demo · no processing</span>
+        <span class="chip">Sample · no processing</span>
       </div>
 
       <div id="recent-links" class="recent-links" hidden>
@@ -430,7 +435,7 @@
       <div class="upgrade-orb" aria-hidden="true"></div>
       <p class="upgrade-eyebrow">Out of free generations</p>
       <h2>You’re on the waitlist path</h2>
-      <p>You’ve used your 10 free demo generations. Upgrade to Pro (Swish or card) for unlimited gens + download unlock for the period, or redeem an owner code.</p>
+      <p>You’ve used your 10 free generations. Upgrade to Pro (Swish or card) for unlimited gens + download unlock for the period, or redeem an owner code.</p>
       <form id="upgrade-waitlist-form" class="upgrade-waitlist-form">
         <input id="upgrade-waitlist-email" type="email" placeholder="you@email.com" required autocomplete="email" />
         <button type="submit" class="btn btn-primary btn-lg btn-glow">Join waitlist</button>
@@ -440,7 +445,7 @@
         <a href="#waitlist-form" class="btn btn-ghost">Scroll to waitlist</a>
         <button type="button" class="btn btn-primary" id="upgrade-pro-btn" title="Open pricing">Upgrade to Pro</button>
       </div>
-      <p class="upgrade-note">Live · Cards (Stripe) + Swish · Owner codes · Real AI later</p>
+      <p class="upgrade-note">€9.99/mo · launch €4.99 · Cards (Stripe) + Swish · Gift codes · Real AI later</p>
     </div>
 
     <div id="error-state" class="state-panel state-error" hidden role="alert">
@@ -476,7 +481,7 @@
       <div class="results-header">
         <h2>Your clips</h2>
         <div class="results-header-actions">
-          <span id="results-meta" class="results-meta">4 clips · demo</span>
+          <span id="results-meta" class="results-meta">4 clips · sample</span>
           <button type="button" class="btn btn-ghost btn-sm" id="open-labs-btn" title="VOID Labs">Labs</button>
           <button type="button" class="btn btn-ghost btn-sm" id="open-history-btn" title="Generation history">History</button>
           <button type="button" class="btn btn-ghost btn-sm" id="open-favorites-btn" title="Starred clips">Favorites</button>
@@ -497,7 +502,7 @@
       <div class="export-pack">
         <div class="export-pack-head">
           <span class="input-label">Export pack</span>
-          <span class="export-hint">Demo · captions + Resonance + cut cues</span>
+          <span class="export-hint">Sample · captions + Resonance + cut cues</span>
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="copy-export-pack">Copy all captions</button>
       </div>
@@ -546,7 +551,7 @@
     <div class="modal-card">
       <p class="modal-eyebrow">First run</p>
       <h2 id="onboarding-title">Quick start checklist</h2>
-      <p class="modal-sub">You’re signed in with 10 free demo gens. Here’s the loop:</p>
+      <p class="modal-sub">You’re signed in with 10 free gens. Here’s the loop:</p>
       <ul class="onboard-list" id="onboard-list">
         <li data-step="paste"><span class="onboard-check" aria-hidden="true"></span> Paste a YouTube or TikTok URL</li>
         <li data-step="style"><span class="onboard-check" aria-hidden="true"></span> Pick style + titles language</li>
@@ -554,7 +559,7 @@
         <li data-step="generate"><span class="onboard-check" aria-hidden="true"></span> Hit Generate — get 4 sample clips</li>
         <li data-step="copy"><span class="onboard-check" aria-hidden="true"></span> Copy captions, Resonance hooks, or pin bait</li>
       </ul>
-      <p class="modal-note">Demo only — not real AI. Data stays in localStorage.</p>
+      <p class="modal-note">Sample UX — not live AI video processing. Data stays in localStorage.</p>
       <div class="modal-actions">
         <button type="button" class="btn btn-primary btn-block" id="onboarding-done">Got it — let’s clip</button>
         <button type="button" class="btn btn-ghost btn-block" id="onboarding-skip">Dismiss</button>
@@ -675,7 +680,7 @@
 
         <section class="owner-card">
           <h2>Announce banner</h2>
-          <p class="settings-hint">Site-wide message shown in-app (above nav). Clear to hide for everyone.</p>
+          <p class="settings-hint">Site-wide message with your PFP + @V_O_I_.D identity (above nav). Clear to hide for everyone. Preview updates as you type.</p>
           <form id="announce-form" class="owner-form">
             <label class="input-label" for="announce-input">Message</label>
             <input id="announce-input" class="auth-input" type="text" maxlength="280" placeholder="e.g. Swish Pro unlocks within minutes today" autocomplete="off" />
@@ -767,7 +772,7 @@
 
         <section class="owner-card">
           <h2>Grant / revoke Pro</h2>
-          <p class="settings-hint">Grant/revoke via owner API (server entitlement). Local fallback only if the server fails.</p>
+          <p class="settings-hint">Grant/revoke via owner API (server entitlement). Shows success/error from the server. Local fallback only if the API fails.</p>
           <form id="pro-grant-form" class="owner-form">
             <label class="input-label" for="pro-grant-email">User email</label>
             <input id="pro-grant-email" class="auth-input" type="email" required placeholder="user@email.com" />
@@ -862,8 +867,8 @@
       <p class="modal-sub" id="pricing-sub">Unlimited gens + download unlock. Pay with card (Stripe) or Swish (Sweden) · or redeem a gift code.</p>
 
       <div id="launch-promo-banner" class="launch-promo-banner" hidden role="status">
-        <strong>Launch price</strong> — cheaper than before.
-        <span class="launch-promo-note">Back to normal price after 1 month.</span>
+        <strong>Launch price</strong> — €4.99/mo · €39/yr (then €9.99/mo · €79/yr).
+        <span class="launch-promo-note">Back to normal after ~30 days.</span>
       </div>
 
       <div class="pricing-plans" id="pricing-plans" role="radiogroup" aria-label="Plan">
@@ -897,7 +902,7 @@
         <p class="swish-panel-title">Betala med Swish · Pay with Swish</p>
         <div class="swish-amount-row">
           <span class="swish-label">Belopp / Amount</span>
-          <strong id="swish-amount-display">€4.99</strong>
+          <strong id="swish-amount-display">€9.99</strong>
         </div>
         <div class="swish-copy-row">
           <div class="swish-copy-block">
@@ -1002,7 +1007,7 @@
   <footer class="footer">
     <div class="container footer-inner">
       <p>© 2026 VOID Clips · by <a href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer">Yuel · @V_O_I_.D</a></p>
-      <p><a href="index.html">← Home</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:yuel.zeru2000@gmail.com?subject=VOID%20Clips%20Support">Support</a> · Demo UX · live payments</p>
+      <p><a href="index.html">← Home</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:yuel.zeru2000@gmail.com?subject=VOID%20Clips%20Support">Support</a> · Sign-in required · live payments</p>
     </div>
   </footer>
 
