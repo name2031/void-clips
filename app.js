@@ -1075,6 +1075,156 @@
     return !!ent.unlimited || (ent.proUntil && Date.now() < ent.proUntil);
   }
 
+  /* Pro exclusivity — owner always counts as Pro */
+  function canUsePro() {
+    return isOwner() || isPro();
+  }
+
+  function promptProUpgrade(feature) {
+    var label = feature || "This feature";
+    showToast(label + " is Pro exclusive");
+    if (typeof openPricingModal === "function") openPricingModal();
+  }
+
+  function proLockChipHtml(label) {
+    return (
+      '<span class="pro-lock-chip" title="Pro exclusive">' +
+      '<span class="pro-lock-chip-icon" aria-hidden="true">🔒</span>' +
+      escapeHtml(label || "Pro") +
+      "</span>"
+    );
+  }
+
+  function proUpgradeCtaHtml(sizeClass) {
+    return (
+      '<button type="button" class="btn btn-primary ' +
+      (sizeClass || "btn-sm") +
+      ' pro-upgrade-cta">Upgrade</button>'
+    );
+  }
+
+  function wireProUpgradeCtas(root) {
+    if (!root) return;
+    root.querySelectorAll(".pro-upgrade-cta").forEach(function (btn) {
+      if (btn.getAttribute("data-pro-wired") === "1") return;
+      btn.setAttribute("data-pro-wired", "1");
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPricingModal();
+      });
+    });
+  }
+
+  var _lastProChrome = null;
+  function applyProChrome() {
+    var signed = isSignedIn();
+    var pro = canUsePro();
+    var proChanged = _lastProChrome !== null && _lastProChrome !== pro;
+    _lastProChrome = pro;
+    document.body.classList.toggle("is-pro-user", signed && pro);
+    document.body.classList.toggle("is-free-user", signed && !pro);
+    document.body.classList.toggle("is-guest-user", !signed);
+
+    var batchToggle = document.getElementById("batch-toggle");
+    if (batchToggle) {
+      batchToggle.classList.toggle("is-pro-locked", signed && !pro);
+      batchToggle.title = !signed
+        ? "Paste multiple links"
+        : pro
+          ? "Paste multiple links"
+          : "Pro exclusive — batch links";
+      if (batchToggle.querySelector(".pro-lock-chip")) {
+        /* keep */
+      } else if (signed && !pro) {
+        var chip = document.createElement("span");
+        chip.className = "pro-lock-chip pro-lock-chip-inline";
+        chip.innerHTML = '<span class="pro-lock-chip-icon" aria-hidden="true">🔒</span>Pro';
+        batchToggle.appendChild(chip);
+      }
+      if (pro) {
+        var existing = batchToggle.querySelector(".pro-lock-chip");
+        if (existing) existing.remove();
+        /* if free user had batch open, snap back to single */
+        if (state.batchMode === false) {
+          /* noop */
+        }
+      } else if (signed && state.batchMode) {
+        state.batchMode = false;
+        batchToggle.setAttribute("aria-pressed", "false");
+        batchToggle.classList.remove("is-on");
+        var singleRow = document.getElementById("single-url-row");
+        var batchRow = document.getElementById("batch-url-row");
+        if (singleRow) singleRow.hidden = false;
+        if (batchRow) batchRow.hidden = true;
+      }
+    }
+
+    ["open-labs-btn", "open-labs-btn-top", "open-favorites-btn", "open-favorites-btn-top", "open-voice-btn"].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.classList.toggle("is-pro-locked", signed && !pro);
+      var mark = btn.querySelector(".pro-lock-chip");
+      if (signed && !pro) {
+        if (!mark) {
+          mark = document.createElement("span");
+          mark.className = "pro-lock-chip pro-lock-chip-inline";
+          mark.innerHTML = '<span class="pro-lock-chip-icon" aria-hidden="true">🔒</span>Pro';
+          btn.appendChild(mark);
+        }
+      } else if (mark) {
+        mark.remove();
+      }
+    });
+
+    var seriesWrap = document.getElementById("series-mode-toggle");
+    if (seriesWrap) {
+      seriesWrap.classList.toggle("is-pro-locked", signed && !pro);
+      var sMark = seriesWrap.parentElement && seriesWrap.parentElement.querySelector(".pro-lock-chip-control");
+      if (signed && !pro) {
+        if (!sMark && seriesWrap.parentElement) {
+          sMark = document.createElement("span");
+          sMark.className = "pro-lock-chip pro-lock-chip-control";
+          sMark.innerHTML = '<span class="pro-lock-chip-icon" aria-hidden="true">🔒</span>Pro';
+          var label = seriesWrap.parentElement.querySelector(".input-label");
+          if (label) label.appendChild(sMark);
+          else seriesWrap.parentElement.insertBefore(sMark, seriesWrap);
+        }
+        if (state.seriesMode) {
+          state.seriesMode = false;
+          applySeriesChrome();
+        }
+      } else if (sMark) {
+        sMark.remove();
+      }
+    }
+
+    var streak = document.getElementById("streak-pill");
+    if (streak && signed && !pro) {
+      streak.classList.add("is-pro-locked");
+      streak.hidden = false;
+      streak.textContent = "🔒 Streak · Pro";
+      streak.title = "Daily VOID streak is Pro exclusive";
+      streak.setAttribute("data-pro-teaser", "1");
+    } else if (streak) {
+      streak.classList.remove("is-pro-locked");
+      streak.removeAttribute("data-pro-teaser");
+      if (pro) updateStreakUI();
+    }
+
+    var labs = document.getElementById("void-labs");
+    if (labs) {
+      labs.classList.toggle("labs-pro-locked", signed && !pro);
+    }
+
+    if (proChanged && lastClips && lastClips.length && typeof renderClipsFromData === "function") {
+      try {
+        renderClipsFromData(lastClips, platformFromUrl(lastSourceUrl || ""));
+        if (typeof renderVoidLabs === "function") renderVoidLabs(lastSourceUrl || "", lastClips);
+      } catch (e) {}
+    }
+  }
+
   function activatePro(email, days, source) {
     email = normalizeEmail(email);
     var ms = Math.max(1, Number(days) || 30) * 24 * 60 * 60 * 1000;
@@ -1477,6 +1627,7 @@
       if (navProBadge) navProBadge.hidden = true;
       syncOwnerVisibility();
       applyFeatureFlagsUI();
+      applyProChrome();
       return;
     }
     /* refresh entitlement flags */
@@ -1501,6 +1652,7 @@
     if (navProBadge) navProBadge.hidden = owner || !pro;
     syncOwnerVisibility();
     applyFeatureFlagsUI();
+    applyProChrome();
 
     var out = !owner && !pro && !(typeof currentUser.credits === "number" && isFinite(currentUser.credits) && currentUser.credits > 0);
     if (upgradeCta) upgradeCta.hidden = !out;
@@ -3249,8 +3401,8 @@
     }
     if (pricingSub) {
       pricingSub.textContent = launch
-        ? "Cheaper than before — launch price. Pay with card (Stripe) or Swish · or redeem a gift code."
-        : "Unlimited gens + downloads. Pay with card (Stripe) or Swish · or redeem a gift code.";
+        ? "Launch price. Free keeps core generate · Pro unlocks Labs, A/B hooks, platforms, batch, favorites, checklist & downloads. Card or Swish · gift codes."
+        : "Free: core generate + Resonance. Pro: Labs pack, A/B hooks, multi-platform, batch, favorites, checklist, downloads. Card or Swish · gift codes.";
     }
   }
 
@@ -4621,6 +4773,10 @@
   }
 
   function downloadClipPack(clip, index) {
+    if (!canUsePro()) {
+      promptProUpgrade("Download / export");
+      return;
+    }
     var body =
       "VOID Clips export\n" +
       "Style: " +
@@ -5550,6 +5706,10 @@
   }
 
   function bumpStreak() {
+    if (!canUsePro()) {
+      updateStreakUI();
+      return getStreak();
+    }
     var s = getStreak();
     var today = dayKeyLocal();
     if (s.lastDay === today) {
@@ -5577,6 +5737,20 @@
   function updateStreakUI() {
     var el = document.getElementById("streak-pill");
     if (!el) return;
+    if (!canUsePro()) {
+      if (isSignedIn()) {
+        el.hidden = false;
+        el.classList.add("is-pro-locked");
+        el.textContent = "🔒 Streak · Pro";
+        el.title = "Daily VOID streak is Pro exclusive";
+        el.setAttribute("data-pro-teaser", "1");
+      } else {
+        el.hidden = true;
+      }
+      return;
+    }
+    el.classList.remove("is-pro-locked");
+    el.removeAttribute("data-pro-teaser");
     var s = getStreak();
     if (!s.count) {
       el.hidden = true;
@@ -5630,6 +5804,10 @@
   }
 
   function toggleFavorite(clip, sourceUrl) {
+    if (!canUsePro()) {
+      promptProUpgrade("Favorites");
+      return false;
+    }
     var key = favKeyFor(clip, sourceUrl);
     var list = getFavorites();
     var idx = -1;
@@ -6026,6 +6204,19 @@
 
   function scrollStopHtml(ss) {
     if (!ss) return "";
+    if (!canUsePro()) {
+      return (
+        '<div class="scroll-stop-block pro-feature-locked">' +
+        '<div class="creator-block-head"><span class="creator-block-label">Scroll-stop breakdown</span>' +
+        proLockChipHtml("Pro") +
+        "</div>" +
+        '<div class="pro-lock-panel">' +
+        '<p class="pro-lock-title">Pro exclusive</p>' +
+        '<p class="pro-lock-sub">Hook / payoff / curiosity / share meters unlock with Pro.</p>' +
+        proUpgradeCtaHtml("btn-sm") +
+        "</div></div>"
+      );
+    }
     var keys = [
       { k: "hook", label: "Hook" },
       { k: "payoff", label: "Payoff" },
@@ -6052,15 +6243,18 @@
       .join("");
     return (
       '<div class="scroll-stop-block">' +
-      '<div class="creator-block-head"><span class="creator-block-label">Scroll-stop breakdown</span></div>' +
+      '<div class="creator-block-head"><span class="creator-block-label">Scroll-stop breakdown</span>' +
+      '<span class="pro-glow-badge" title="Pro">Pro</span></div>' +
       bars +
       "</div>"
     );
   }
 
   function creatorToolsHtml(clip, index) {
+    var pro = canUsePro();
     var variants = clip.hookVariants || [];
-    var variantRows = variants
+    var showVariants = pro ? variants : variants.slice(0, 1);
+    var variantRows = showVariants
       .map(function (v) {
         return (
           '<div class="ab-row">' +
@@ -6077,16 +6271,31 @@
         );
       })
       .join("");
+    if (!pro && variants.length > 1) {
+      variantRows +=
+        '<div class="ab-row ab-row-locked">' +
+        '<span class="ab-badge">B–C</span>' +
+        '<p class="ab-text pro-lock-muted">2 more A/B hooks</p>' +
+        proLockChipHtml("Pro") +
+        proUpgradeCtaHtml("btn-xs") +
+        "</div>";
+    }
 
-    var platChips = ["tiktok", "shorts", "reels"]
+    var platKeys = ["tiktok", "shorts", "reels"];
+    var platChips = platKeys
       .map(function (k, i) {
+        var locked = !pro && i > 0;
         return (
           '<button type="button" class="plat-chip' +
           (i === 0 ? " is-active" : "") +
+          (locked ? " is-pro-locked" : "") +
           '" data-plat="' +
           k +
-          '">' +
+          '"' +
+          (locked ? ' data-pro-lock="1" title="Pro exclusive"' : "") +
+          ">" +
           escapeHtml(PLATFORM_META[k].label) +
+          (locked ? ' <span class="pro-lock-mini">🔒</span>' : "") +
           "</button>"
         );
       })
@@ -6100,7 +6309,7 @@
           '<span class="thumb-idea-text">' +
           escapeHtml(t) +
           "</span>" +
-          "<span class=\"thumb-idea-copy\">Copy</span></button>"
+          '<span class="thumb-idea-copy">Copy</span></button>'
         );
       })
       .join("");
@@ -6115,11 +6324,14 @@
     ]
       .map(function (c) {
         return (
-          '<label class="post-check">' +
+          '<label class="post-check' +
+          (pro ? "" : " is-pro-locked") +
+          '">' +
           '<input type="checkbox" data-check="' +
           c.k +
           '"' +
           (cl[c.k] ? " checked" : "") +
+          (pro ? "" : " disabled") +
           " />" +
           "<span>" +
           c.label +
@@ -6128,21 +6340,20 @@
       })
       .join("");
 
-    return (
-      '<div class="creator-tools" data-creator-tools>' +
-      '<div class="creator-tabs" role="tablist">' +
-      '<button type="button" class="creator-tab is-active" data-ctab="hooks">Hooks A/B</button>' +
-      '<button type="button" class="creator-tab" data-ctab="platforms">Platforms</button>' +
-      '<button type="button" class="creator-tab" data-ctab="post">Post</button>' +
-      "</div>" +
-      '<div class="creator-panel is-active" data-cpanel="hooks">' +
-      '<p class="creator-hint">A/B test these · one-tap copy</p>' +
-      variantRows +
-      "</div>" +
+    var hooksHead =
+      '<p class="creator-hint">' +
+      (pro ? "A/B test these · one-tap copy" : "Free: 1 hook · Pro unlocks A/B variants") +
+      (pro ? ' <span class="pro-glow-badge">Pro</span>' : "") +
+      "</p>";
+
+    var platformsPanel =
       '<div class="creator-panel" data-cpanel="platforms" hidden>' +
       '<div class="plat-chips">' +
       platChips +
       "</div>" +
+      (pro
+        ? ""
+        : '<p class="pro-lock-inline">Free: TikTok pack · <button type="button" class="linkish pro-upgrade-cta">Upgrade</button> for Shorts + Reels</p>') +
       '<p class="plat-hint">' +
       escapeHtml(firstPlat.hint || "") +
       "</p>" +
@@ -6150,16 +6361,49 @@
       escapeHtml(firstPlat.caption || "") +
       "</p>" +
       '<button type="button" class="btn btn-ghost btn-xs copy-plat">Copy caption</button>' +
+      "</div>";
+
+    var postPanel;
+    if (pro) {
+      postPanel =
+        '<div class="creator-panel" data-cpanel="post" hidden>' +
+        '<div class="post-check-list">' +
+        checks +
+        "</div>" +
+        '<p class="creator-hint" style="margin-top:0.65rem">Thumbnail text <span class="pro-glow-badge">Pro</span></p>' +
+        '<div class="thumb-ideas">' +
+        thumbs +
+        "</div>" +
+        "</div>";
+    } else {
+      postPanel =
+        '<div class="creator-panel" data-cpanel="post" hidden>' +
+        '<div class="pro-lock-panel">' +
+        '<p class="pro-lock-title">Post checklist · Pro exclusive</p>' +
+        '<p class="pro-lock-sub">Mark hook / caption / hashtags / pin / thumbnail — and save progress. Thumbnail text ideas included.</p>' +
+        proUpgradeCtaHtml("btn-sm") +
+        "</div>" +
+        '<div class="post-check-list post-check-list-teaser" aria-hidden="true">' +
+        checks +
+        "</div>" +
+        "</div>";
+    }
+
+    return (
+      '<div class="creator-tools" data-creator-tools>' +
+      '<div class="creator-tabs" role="tablist">' +
+      '<button type="button" class="creator-tab is-active" data-ctab="hooks">Hooks A/B</button>' +
+      '<button type="button" class="creator-tab" data-ctab="platforms">Platforms</button>' +
+      '<button type="button" class="creator-tab" data-ctab="post">Post' +
+      (pro ? "" : " 🔒") +
+      "</button>" +
       "</div>" +
-      '<div class="creator-panel" data-cpanel="post" hidden>' +
-      '<div class="post-check-list">' +
-      checks +
+      '<div class="creator-panel is-active" data-cpanel="hooks">' +
+      hooksHead +
+      variantRows +
       "</div>" +
-      '<p class="creator-hint" style="margin-top:0.65rem">Thumbnail text</p>' +
-      '<div class="thumb-ideas">' +
-      thumbs +
-      "</div>" +
-      "</div>" +
+      platformsPanel +
+      postPanel +
       "</div>"
     );
   }
@@ -6198,6 +6442,10 @@
     var activePlat = "tiktok";
     root.querySelectorAll(".plat-chip").forEach(function (chip) {
       chip.addEventListener("click", function () {
+        if (chip.getAttribute("data-pro-lock") === "1" && !canUsePro()) {
+          promptProUpgrade("Multi-platform captions");
+          return;
+        }
         activePlat = chip.getAttribute("data-plat");
         root.querySelectorAll(".plat-chip").forEach(function (c) {
           c.classList.toggle("is-active", c === chip);
@@ -6224,11 +6472,24 @@
 
     root.querySelectorAll(".post-check input").forEach(function (input) {
       input.addEventListener("change", function () {
+        if (!canUsePro()) {
+          input.checked = false;
+          promptProUpgrade("Post checklist");
+          return;
+        }
         if (!clip.checklist) clip.checklist = emptyChecklist();
         clip.checklist[input.getAttribute("data-check")] = !!input.checked;
         if (lastGenId) updateGenChecklist(lastGenId, index, clip.checklist);
       });
+      input.addEventListener("click", function (e) {
+        if (!canUsePro()) {
+          e.preventDefault();
+          promptProUpgrade("Post checklist");
+        }
+      });
     });
+
+    wireProUpgradeCtas(root);
   }
 
   function renderClipsFromData(clips, sourceLabel) {
@@ -6273,9 +6534,14 @@
         "</span>" +
         '<button type="button" class="fav-star' +
         (favOn ? " is-on" : "") +
-        '" title="Favorite" aria-label="Favorite" aria-pressed="' +
+        (canUsePro() ? "" : " is-pro-locked") +
+        '" title="' +
+        (canUsePro() ? "Favorite" : "Favorites · Pro exclusive") +
+        '" aria-label="Favorite" aria-pressed="' +
         (favOn ? "true" : "false") +
-        '">★</button>' +
+        '">' +
+        (canUsePro() ? "★" : "🔒") +
+        "</button>" +
         (burn ? '<p class="thumb-caption" aria-hidden="true">' + escapeHtml(burn) + "</p>" : "") +
         '<div class="thumb-progress" aria-hidden="true"><span class="thumb-progress-fill"></span></div>' +
         playIconSvg() +
@@ -6312,10 +6578,12 @@
         '<div class="clip-actions">' +
         '<button type="button" class="btn btn-ghost btn-sm copy-caption">Copy caption</button>' +
         '<button type="button" class="btn btn-ghost btn-sm share-clip">Share</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm share-card-btn" title="PNG share card">Share card</button>' +
-        (isOwner() || isPro()
-          ? '<button type="button" class="btn btn-primary btn-sm download-pro" title="Download caption pack">Download</button>'
-          : '<button type="button" class="btn btn-primary btn-sm btn-pro" disabled title="Pro unlocks downloads">Download</button>') +
+        (canUsePro()
+          ? '<button type="button" class="btn btn-ghost btn-sm share-card-btn" title="PNG share card">Share card <span class="pro-glow-badge">Pro</span></button>'
+          : '<button type="button" class="btn btn-ghost btn-sm share-card-btn is-pro-locked" title="Share card · Pro exclusive">🔒 Share card</button>') +
+        (canUsePro()
+          ? '<button type="button" class="btn btn-primary btn-sm download-pro btn-pro-glow" title="Download caption pack">Download <span class="pro-glow-badge">Pro</span></button>'
+          : '<button type="button" class="btn btn-primary btn-sm btn-pro download-locked" title="Pro unlocks downloads">🔒 Download</button>') +
         "</div>" +
         "</div>";
 
@@ -6355,6 +6623,12 @@
           markOnboardStep("copy");
         });
       }
+      var dlLocked = card.querySelector(".download-locked");
+      if (dlLocked) {
+        dlLocked.addEventListener("click", function () {
+          promptProUpgrade("Download / export");
+        });
+      }
 
       var personaBtn = card.querySelector(".copy-persona");
       if (personaBtn) {
@@ -6375,18 +6649,29 @@
       if (favBtn) {
         favBtn.addEventListener("click", function (e) {
           e.stopPropagation();
+          if (!canUsePro()) {
+            promptProUpgrade("Favorites");
+            return;
+          }
           var on = toggleFavorite(clip, lastSourceUrl);
           favBtn.classList.toggle("is-on", on);
           favBtn.setAttribute("aria-pressed", on ? "true" : "false");
+          favBtn.textContent = "★";
         });
       }
 
       var shareCardBtn = card.querySelector(".share-card-btn");
       if (shareCardBtn) {
         shareCardBtn.addEventListener("click", function () {
+          if (!canUsePro()) {
+            promptProUpgrade("Share card PNG");
+            return;
+          }
           exportShareCard(clip, index);
         });
       }
+
+      wireProUpgradeCtas(card);
 
       var thumb = card.querySelector(".clip-thumb");
       if (thumb) {
@@ -6425,6 +6710,10 @@
   }
 
   function exportShareCard(clip, index) {
+    if (!canUsePro()) {
+      promptProUpgrade("Share card PNG");
+      return;
+    }
     var canvas = document.createElement("canvas");
     canvas.width = 1080;
     canvas.height = 1920;
@@ -6505,6 +6794,34 @@
     var labs = document.getElementById("void-labs");
     if (!labs) return;
     labs.hidden = false;
+    labs.classList.toggle("labs-pro-locked", !canUsePro());
+    if (!canUsePro()) {
+      var pulseLocked = document.getElementById("labs-pulse");
+      var seriesLocked = document.getElementById("labs-series");
+      var warLocked = document.getElementById("labs-war");
+      var lockHtml =
+        '<div class="pro-lock-panel pro-lock-panel-labs">' +
+        '<span class="pro-lock-chip">' +
+        '<span class="pro-lock-chip-icon" aria-hidden="true">🔒</span>Pro exclusive</span>' +
+        '<p class="pro-lock-title">VOID Labs</p>' +
+        '<p class="pro-lock-sub">Pulse · comment war kit · series mode · brand voice · share cards · streaks — unlocked with Pro.</p>' +
+        '<ul class="pro-lock-list">' +
+        "<li>VOID Pulse best-time windows</li>" +
+        "<li>Comment war kit (pins + reply bait)</li>" +
+        "<li>Series mode · 3-part cliffhangers</li>" +
+        "<li>Brand voice + share card PNG</li>" +
+        "</ul>" +
+        proUpgradeCtaHtml("btn-sm") +
+        "</div>";
+      if (pulseLocked) pulseLocked.innerHTML = lockHtml;
+      if (seriesLocked) {
+        seriesLocked.hidden = true;
+        seriesLocked.innerHTML = "";
+      }
+      if (warLocked) warLocked.innerHTML = "";
+      wireProUpgradeCtas(labs);
+      return;
+    }
     var pulse = buildPulse(url, clips);
     var pulseEl = document.getElementById("labs-pulse");
     if (pulseEl) {
@@ -6811,6 +7128,10 @@
 
   async function runBatchGenerate() {
     if (batchBusy) return;
+    if (!canUsePro()) {
+      promptProUpgrade("Batch links");
+      return;
+    }
     var urls = parseBatchUrls((document.getElementById("batch-url-input") || {}).value);
     if (!urls.length) {
       showToast("Paste at least one valid link");
@@ -6880,18 +7201,48 @@
       var btn = document.getElementById(id);
       if (!btn) return;
       btn.addEventListener("click", function () {
-        if (renderFn) renderFn();
-        openDrawer(document.getElementById(drawerId));
+        var block = false;
+        if (renderFn) block = renderFn() === "block";
+        if (block) return;
+        if (drawerId) openDrawer(document.getElementById(drawerId));
       });
     }
     bindOpen("open-history-btn", "history-drawer", renderHistoryDrawer);
     bindOpen("open-history-btn-top", "history-drawer", renderHistoryDrawer);
-    bindOpen("open-favorites-btn", "favorites-drawer", renderFavoritesDrawer);
-    bindOpen("open-favorites-btn-top", "favorites-drawer", renderFavoritesDrawer);
-    bindOpen("open-voice-btn", "voice-drawer", syncVoiceForm);
+    bindOpen("open-favorites-btn", "favorites-drawer", function () {
+      if (!canUsePro()) {
+        promptProUpgrade("Favorites");
+        return "block";
+      }
+      renderFavoritesDrawer();
+    });
+    bindOpen("open-favorites-btn-top", "favorites-drawer", function () {
+      if (!canUsePro()) {
+        promptProUpgrade("Favorites");
+        return "block";
+      }
+      renderFavoritesDrawer();
+    });
+    bindOpen("open-voice-btn", "voice-drawer", function () {
+      if (!canUsePro()) {
+        promptProUpgrade("Brand voice");
+        return "block";
+      }
+      syncVoiceForm();
+    });
     bindOpen("open-labs-btn", null, function () {
       if (!loadFeatureFlags().labs && !isOwner()) {
         showToast("Labs is temporarily off");
+        return;
+      }
+      if (!canUsePro()) {
+        if (lastClips.length) renderVoidLabs(lastSourceUrl, lastClips);
+        var labsLocked = document.getElementById("void-labs");
+        if (labsLocked) {
+          labsLocked.hidden = false;
+          labsLocked.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        promptProUpgrade("VOID Labs");
         return;
       }
       var labs = document.getElementById("void-labs");
@@ -6903,6 +7254,20 @@
     bindOpen("open-labs-btn-top", null, function () {
       if (!loadFeatureFlags().labs && !isOwner()) {
         showToast("Labs is temporarily off");
+        return;
+      }
+      if (!canUsePro()) {
+        if (lastClips.length) renderVoidLabs(lastSourceUrl, lastClips);
+        else {
+          var labsTease = document.getElementById("void-labs");
+          if (labsTease) {
+            labsTease.hidden = false;
+            renderVoidLabs(lastSourceUrl || "", []);
+          }
+        }
+        var labsL = document.getElementById("void-labs");
+        if (labsL) labsL.scrollIntoView({ behavior: "smooth", block: "start" });
+        promptProUpgrade("VOID Labs");
         return;
       }
       var labs = document.getElementById("void-labs");
@@ -6952,6 +7317,10 @@
           showToast("Batch is temporarily off");
           return;
         }
+        if (!canUsePro()) {
+          promptProUpgrade("Batch links");
+          return;
+        }
         state.batchMode = !state.batchMode;
         batchToggle.setAttribute("aria-pressed", state.batchMode ? "true" : "false");
         batchToggle.classList.toggle("is-on", state.batchMode);
@@ -6986,6 +7355,10 @@
     var seriesToggle = document.getElementById("series-mode-toggle");
     if (seriesToggle) {
       seriesToggle.addEventListener("click", function () {
+        if (!canUsePro()) {
+          promptProUpgrade("Series mode");
+          return;
+        }
         state.seriesMode = !state.seriesMode;
         applySeriesChrome();
         showToast(state.seriesMode ? "Series mode on — 3-part ladder in Labs" : "Series mode off");
@@ -6997,6 +7370,10 @@
     if (voiceForm) {
       voiceForm.addEventListener("submit", function (e) {
         e.preventDefault();
+        if (!canUsePro()) {
+          promptProUpgrade("Brand voice");
+          return;
+        }
         var banned = (document.getElementById("voice-banned").value || "")
           .split(",")
           .map(function (s) { return s.trim(); })
@@ -7018,9 +7395,21 @@
     var voiceClear = document.getElementById("voice-clear-btn");
     if (voiceClear) {
       voiceClear.addEventListener("click", function () {
+        if (!canUsePro()) {
+          promptProUpgrade("Brand voice");
+          return;
+        }
         try { localStorage.removeItem(VOICE_KEY); } catch (e) {}
         syncVoiceForm();
         showToast("Brand voice cleared");
+      });
+    }
+
+    var streakPill = document.getElementById("streak-pill");
+    if (streakPill) {
+      streakPill.style.cursor = "pointer";
+      streakPill.addEventListener("click", function () {
+        if (!canUsePro()) promptProUpgrade("Daily streak");
       });
     }
   }

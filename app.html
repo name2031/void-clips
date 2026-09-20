@@ -296,13 +296,13 @@
         </div>
       </div>
       <h1>Generate clips</h1>
-      <p>Paste a link. Pick a style. Get punchy hooks, platform packs &amp; VOID Resonance — you film; we plan the post.</p>
+      <p>Paste a link. Free gets core hooks, captions &amp; Resonance. <strong>Pro</strong> unlocks Labs, A/B, platforms, batch &amp; more.</p>
     </div>
 
     <div class="input-card">
       <div class="input-label-row">
         <label class="input-label" for="url-input">Video URL</label>
-        <button type="button" id="batch-toggle" class="batch-toggle" aria-pressed="false" title="Paste multiple links">Batch</button>
+        <button type="button" id="batch-toggle" class="batch-toggle" aria-pressed="false" title="Batch links · Pro">Batch</button>
       </div>
       <div class="url-row" id="single-url-row">
         <div class="url-field">
@@ -435,7 +435,7 @@
       <div class="upgrade-orb" aria-hidden="true"></div>
       <p class="upgrade-eyebrow">Out of free generations</p>
       <h2>You’re on the waitlist path</h2>
-      <p>You’ve used your 10 free generations. Upgrade to Pro (Swish or card) for unlimited gens + download unlock for the period, or redeem an owner code.</p>
+      <p>You’ve used your 10 free generations. Upgrade to <strong>Pro</strong> for unlimited gens plus Labs, A/B hooks, multi-platform packs, batch, favorites, checklist &amp; downloads — or redeem an owner code.</p>
       <form id="upgrade-waitlist-form" class="upgrade-waitlist-form">
         <input id="upgrade-waitlist-email" type="email" placeholder="you@email.com" required autocomplete="email" />
         <button type="submit" class="btn btn-primary btn-lg btn-glow">Join waitlist</button>
@@ -489,7 +489,7 @@
           <button type="button" class="btn btn-primary btn-sm" id="regenerate-btn" title="Run generate again on the same link">Regenerate</button>
         </div>
       </div>
-      <p id="results-flow" class="results-flow" hidden>Preview the cut → A/B hooks &amp; platform captions → checklist → copy / share</p>
+      <p id="results-flow" class="results-flow" hidden>Free: preview → copy captions. Pro: A/B hooks · platforms · checklist · Labs · download.</p>
       <div id="batch-groups" class="batch-groups" hidden></div>
       <div id="clips-grid" class="clips-grid aspect-9-16" data-style="viral"></div>
       <div class="hashtag-pack" id="hashtag-pack">
@@ -517,7 +517,7 @@
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="open-voice-btn" title="Brand voice">Brand voice</button>
       </div>
-      <p class="labs-lead">Pulse, scroll-stop breakdown, comment war kit, thumbnails &amp; share cards — planning tools, not video export.</p>
+      <p class="labs-lead">Pro exclusive — Pulse, scroll-stop, comment war kit, thumbnails &amp; share cards. Planning tools, not video export.</p>
       <div id="labs-pulse" class="labs-card"></div>
       <div id="labs-series" class="labs-card" hidden></div>
       <div id="labs-war" class="labs-card"></div>
@@ -525,7 +525,7 @@
 
     <div class="waitlist" id="waitlist-form-section">
       <h3>Get notified when live AI ships</h3>
-      <p>Free waitlist for live AI. Pro (card or Swish) unlocks unlimited gens + download for the period now.</p>
+      <p>Free waitlist for live AI. Pro unlocks Labs, A/B, platforms, batch, favorites, checklist &amp; downloads now.</p>
       <form id="waitlist-form" class="waitlist-form">
         <input id="waitlist-email" type="email" placeholder="you@email.com" required autocomplete="email" />
         <button type="submit" class="btn btn-primary">Join waitlist</button>
@@ -864,7 +864,28 @@
     <div class="modal-card modal-card-lg">
       <p class="modal-eyebrow" id="pricing-eyebrow">Pro · EUR</p>
       <h2 id="pricing-title">Go Pro</h2>
-      <p class="modal-sub" id="pricing-sub">Unlimited gens + download unlock. Pay with card (Stripe) or Swish (Sweden) · or redeem a gift code.</p>
+      <p class="modal-sub" id="pricing-sub">Free keeps core generate. Pro unlocks the exclusive toolkit. Pay with card (Stripe) or Swish · or redeem a gift code.</p>
+
+      <div class="pricing-compare" id="pricing-compare">
+        <div class="pricing-compare-col">
+          <p class="pricing-compare-tier">Free</p>
+          <ul>
+            <li>10 free gens</li>
+            <li>1 hook + captions + hashtags</li>
+            <li>VOID Resonance score</li>
+            <li>Basic history</li>
+          </ul>
+        </div>
+        <div class="pricing-compare-col pricing-compare-pro">
+          <p class="pricing-compare-tier">Pro <span class="pro-glow-badge">Exclusive</span></p>
+          <ul>
+            <li>Unlimited gens</li>
+            <li>A/B hooks (3) + multi-platform</li>
+            <li>VOID Labs pack + series + voice</li>
+            <li>Batch · favorites · checklist · download</li>
+          </ul>
+        </div>
+      </div>
 
       <div id="launch-promo-banner" class="launch-promo-banner" hidden role="status">
         <strong>Launch price</strong> — €4.99/mo · €39/yr (then €9.99/mo · €79/yr).
@@ -878,7 +899,7 @@
             <span class="plan-price-was" id="price-monthly-was" hidden></span>
             <span class="plan-price" id="price-monthly-now">€9.99<span class="plan-per">/mo</span></span>
           </span>
-          <span class="plan-desc">Unlimited gens · downloads · 30 days</span>
+          <span class="plan-desc">Full Pro toolkit · 30 days</span>
         </button>
         <button type="button" class="plan-card" data-plan="yearly" aria-pressed="false">
           <span class="plan-name">Yearly <span class="plan-save" id="price-yearly-save">~2 mo free</span></span>
@@ -886,7 +907,7 @@
             <span class="plan-price-was" id="price-yearly-was" hidden></span>
             <span class="plan-price" id="price-yearly-now">€79<span class="plan-per">/yr</span></span>
           </span>
-          <span class="plan-desc">Best value · 365 days Pro</span>
+          <span class="plan-desc">Best value · full Pro · 365 days</span>
         </button>
       </div>
 
