@@ -1970,7 +1970,7 @@
     try {
       var h = location.hostname;
       if (h === "127.0.0.1" || h === "localhost") {
-        var localSecret = "void_thplkwAhUeBsoowDx2AJCsYJ51xCykS3vR8z0Z_75iw";
+        var localSecret = "void_REDACTED_LEGACY_SECRET";
         try { localStorage.setItem(API_SECRET_KEY, localSecret); } catch (e2) {}
         return localSecret;
       }

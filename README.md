@@ -1,127 +1,65 @@
-# VOID Clips
+# VOID AI
 
-**Long videos in. Viral clips out.**
+**Tell it what you need. Let it handle the rest.**
 
-> ✅ **Public on Railway** — https://void-clips-production.up.railway.app  
-> Repo: https://github.com/name2031/void-clips (deploys `main` → Railway)
+A complete AI workspace: streaming chat, auth, projects, files, memory, settings, and an extensible tools registry. Replaces Void Clips.
 
-Premium product shell for creator **Yuel** (TikTok [@V_O_I_.D](https://www.tiktok.com/@V_O_I_.D)).
+## Stack
 
-Black + violet neon · Space Grotesk · Resend Gmail verify · Swish + Stripe Pro · accounts in browser.
+- Frontend: Vite + React 18 + TypeScript
+- Backend: Express (Node 20)
+- DB: better-sqlite3 (Users, Conversations, Messages, Projects, Files, Memories, Settings)
+- AI: OpenAI-compatible chat completions with SSE streaming
+- Single process: Express serves `/api/*` and the Vite `dist/` build
 
----
-
-## How to run (local)
-
-### A) Static only (demo verify fallback)
-
-```bash
-cd void-clips
-python3 -m http.server 8080
-```
-
-Open `http://localhost:8080`. Email verify falls back to a **demo code modal** with warning: *Not secure — start server for real Gmail*.
-
-### B) Local server + real Gmail codes (Resend)
+## Quick start
 
 ```bash
-cd void-clips
+cp .env.example .env
+# Set OPENAI_API_KEY or GROQ_API_KEY
+
 npm install
-# Configure server/.env (never commit real keys):
-#   VOID_API_SECRET=…
-#   RESEND_API_KEY=…
-#   FROM_EMAIL=onboarding@resend.dev
-#   SWISH_NUMBER=+46765875459
-#   STRIPE_SECRET_KEY=sk_…          # cards
-#   STRIPE_WEBHOOK_SECRET=whsec_…
+npm run build
 npm start
 ```
 
-Visit `http://127.0.0.1:8787`.
-
-> 🔐 **Never commit `.env`, `LOCAL_API_KEY.txt`, or `sk_` / `whsec_` / `re_` keys.**  
-> Rotate any key that was pasted in chat.
-
-| File | Purpose |
-|------|---------|
-| `index.html` | Landing |
-| `app.html` / `app.js` | Auth, verify, Swish + Stripe Pro, Owner Panel, Resonance |
-| `server/` | Express API + Stripe + Swish pending + static host |
-| `terms.html` / `privacy.html` | Terms & privacy |
-| `DESCRIPTIONS.md` | Marketing copy |
-
----
-
-## Auth
-
-- Sign up / sign in: **email + strong password** (min **10**, upper + lower + number)
-- Passwords: **salted SHA-256** (Web Crypto) — never plaintext
-- After password: **must verify** with 6-digit code before any app use
-- Rate limits: max **5** failed passwords → **60s** lockout; max **5** code tries
-- Session: **sessionStorage** by default; **Remember this device** → **localStorage**
-- Prefer `/api/send-verify` → real email; demo modal only as fallback
-
-**OWNER_EMAIL:** `yuel.zeru2000@gmail.com` (after verify)
-
----
-
-## Checkout / Pro (EUR)
-
-| | Monthly | Yearly |
-|--|---------|--------|
-| Normal | **€9.99** | **€79** |
-| Launch promo (first ~30 days / `LAUNCH_PROMO_UNTIL`) | **€4.99** | **€39** |
-
-**Both payment paths are live in production when configured:**
-
-1. **Card (Stripe)** — in-app **Pay with card** → Stripe Checkout → Pro after confirm / webhook  
-2. **Swish** — send to **+46 76-587 54 59** (`076-587 54 59`) with unique `VOID-XXXX` ref → **I've paid** → owner confirms in Owner Panel  
-
-Gift / owner codes still unlock Pro. Without `STRIPE_SECRET_KEY`, the card button stays hidden; Swish still works.
-
----
-
-## Owner Panel (owner only)
-
-1. Maintenance / update mode  
-2. **Swish pending** — Confirm → grant Pro / Reject  
-3. Gift / redeem codes  
-4. **Grant / Revoke Pro** (server entitlement store; local fallback if API down)  
-5. Force credits / waitlist / local stats  
-
----
-
-## Owner API
-
-Auth (same as other `/api/owner/*` routes):
-
-- Header `X-Void-Api-Secret: <VOID_API_SECRET>` (or `Authorization: Bearer …`)
-- Header `X-Owner-Email: yuel.zeru2000@gmail.com` (must match `OWNER_EMAIL`)
-
-| Method | Path | Body / query | Notes |
-|--------|------|--------------|-------|
-| `POST` | `/api/owner/grant-pro` | `{ "email", "days" }` | `days` integer **1–3650**. Persists Pro in the same grants store as Stripe/Swish. Returns `{ ok, email, pro, proUntil, plan, source: "owner-grant" }`. |
-| `POST` | `/api/owner/revoke-pro` | `{ "email" }` | Clears Pro for that email. Returns `{ ok, email, pro: false }`. |
-| `GET` | `/api/owner/entitlement?email=` | query | Current Pro status (`pro`, `proUntil`, `plan`, `source`). Alias: `/api/owner/lookup`. |
-
-Example:
+Dev (API on :8787, Vite on :5173 with proxy):
 
 ```bash
-curl -X POST https://YOUR_HOST/api/owner/grant-pro \
-  -H "Content-Type: application/json" \
-  -H "X-Void-Api-Secret: YOUR_VOID_API_SECRET" \
-  -H "X-Owner-Email: yuel.zeru2000@gmail.com" \
-  -d '{"email":"user@example.com","days":30}'
+npm install
+npm run dev
 ```
 
----
+Open http://localhost:5173 (dev) or http://localhost:8787 (production build).
 
-## Deploy (GitHub → Railway)
+## Environment variables
 
-Push to `main` on https://github.com/name2031/void-clips. Railway rebuilds from GitHub.
+| Variable | Required | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | one of keys | OpenAI (or compatible) API key |
+| `GROQ_API_KEY` | one of keys | Groq API key (used if OpenAI key unset) |
+| `OPENAI_BASE_URL` | no | Override API base (default OpenAI or Groq) |
+| `OPENAI_MODEL` | no | Model id (default `gpt-4o-mini` / Groq `llama-3.3-70b-versatile`) |
+| `PORT` | no | Default `8787` |
+| `HOST` | no | Default `0.0.0.0` |
+| `DATA_DIR` | no | SQLite directory (default `./data`) |
+| `OWNER_EMAIL` | no | Email that gets `is_owner` on signup (default `yuel.zeru2000@gmail.com`) |
+| `NODE_ENV` | no | Set `production` on deploy |
 
-Required platform env (never in git): `VOID_API_SECRET`, `RESEND_API_KEY`, `FROM_EMAIL`, `SWISH_NUMBER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, optional `LAUNCH_PROMO_UNTIL`, `PUBLIC_BASE`.
+## Railway / Docker
 
-Support: **yuel.zeru2000@gmail.com** · subject `VOID Clips Support` / `VOID Clips Bug`.
+```bash
+npm run build && node server/index.js
+```
 
-© 2026 VOID Clips · Yuel (@V_O_I_.D)
+Dockerfile builds the Vite app then starts Express. Set `OPENAI_API_KEY` or `GROQ_API_KEY` in the Railway dashboard. Persist `/app/data` and `/app/uploads` with a volume if you need durable storage.
+
+## API (auth via httpOnly cookie or `Authorization: Bearer`)
+
+- `GET /api/health`
+- `POST /api/auth/signup` · `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me`
+- Conversations, chat stream, projects, files, memories, settings under `/api/*`
+
+## Legacy
+
+Previous Void Clips UI is archived under `archive/void-clips-legacy/`.

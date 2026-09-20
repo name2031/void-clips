@@ -1,14 +1,11 @@
 services:
   - type: web
-    name: void-clips
+    name: void-ai
     runtime: node
-    plan: free
-    buildCommand: npm install --omit=dev
+    buildCommand: npm ci && npm run build
     startCommand: node server/index.js
     envVars:
-      - key: PUBLIC_MODE
-        value: "1"
-      - key: PORT
-        value: "8787"
-      - key: NODE_VERSION
-        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: OWNER_EMAIL
+        value: yuel.zeru2000@gmail.com
