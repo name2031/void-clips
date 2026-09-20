@@ -859,7 +859,19 @@
       var email = normalizeEmail(u.email || u.identity);
       if (!email) return null;
       var acct = getAccount(email);
-      if (!acct || !acct.verified) return null;
+      if (!acct) return null;
+      /* Owner: auto-verify on session restore so Generate is never blocked on Gmail */
+      if (!acct.verified) {
+        if (isOwnerEmail(email) && isAccountUsable(acct)) {
+          acct.verified = true;
+          if (typeof acct.credits !== "number" || !isFinite(acct.credits) || acct.credits < 0) {
+            acct.credits = FREE_CREDITS;
+          }
+          upsertAccount(acct);
+        } else {
+          return null;
+        }
+      }
       if (acct.sessionToken && u.token !== acct.sessionToken) return null;
       u.email = email;
       u.identity = email;
@@ -872,16 +884,31 @@
     }
   }
 
+  /** Persistable credit integer — never Infinity/NaN/null (JSON would turn Infinity into null). */
+  function finiteCreditsForStore(credits, fallback) {
+    var fb = typeof fallback === "number" && isFinite(fallback) ? fallback : FREE_CREDITS;
+    if (typeof credits !== "number" || !isFinite(credits) || credits < 0) return fb;
+    return Math.min(9999, Math.floor(credits));
+  }
+
   function saveUser(user) {
     try {
       var email = normalizeEmail(user.email || user.identity);
       var token = user.token || randomHex(24);
+      var storeCredits = isOwnerEmail(email)
+        ? FREE_CREDITS
+        : finiteCreditsForStore(user.credits, FREE_CREDITS);
+      /* Pro/unlimited keep an in-memory Infinity but must not write Infinity into localStorage */
+      if (!isOwnerEmail(email) && user && (user.unlimited || user.pro) && !isFinite(user.credits)) {
+        var prevAcct = getAccount(email);
+        storeCredits = finiteCreditsForStore(prevAcct && prevAcct.credits, FREE_CREDITS);
+      }
       var toSave = {
         token: token,
         email: email,
         identity: email,
         displayName: user.displayName || displayName(email),
-        credits: isOwnerEmail(email) ? FREE_CREDITS : user.credits,
+        credits: storeCredits,
         verified: !!user.verified,
         createdAt: user.createdAt || Date.now(),
       };
@@ -890,7 +917,7 @@
       if (acct) {
         acct.sessionToken = token;
         if (!isOwnerEmail(email)) {
-          acct.credits = typeof user.credits === "number" ? user.credits : FREE_CREDITS;
+          acct.credits = storeCredits;
         }
         upsertAccount(acct);
       }
@@ -1027,8 +1054,15 @@
     u.pro = !!ent.unlimited || (ent.proUntil && Date.now() < ent.proUntil);
     if (u.unlimited || u.pro) {
       u.credits = Infinity;
-    } else if (typeof u.credits !== "number" || u.credits < 0) {
-      u.credits = acct && typeof acct.credits === "number" ? acct.credits : FREE_CREDITS;
+    } else {
+      var pool = typeof u.credits === "number" && isFinite(u.credits) ? u.credits : null;
+      if (pool === null || pool < 0) {
+        pool =
+          acct && typeof acct.credits === "number" && isFinite(acct.credits) && acct.credits >= 0
+            ? acct.credits
+            : FREE_CREDITS;
+      }
+      u.credits = pool;
     }
   }
 
@@ -1468,11 +1502,15 @@
     syncOwnerVisibility();
     applyFeatureFlagsUI();
 
-    var out = !owner && !pro && currentUser.credits <= 0;
+    var out = !owner && !pro && !(typeof currentUser.credits === "number" && isFinite(currentUser.credits) && currentUser.credits > 0);
     if (upgradeCta) upgradeCta.hidden = !out;
     if (generateBtn) {
       var blockedMaint = isMaintenanceOn() && !owner;
-      generateBtn.disabled = out || blockedMaint;
+      /* Keep clickable when out of credits so generate() can toast + scroll to upgrade.
+         Only hard-disable during maintenance (or while Generating… via setGenerateBusy). */
+      if (!generateBtn.classList.contains("is-generating")) {
+        generateBtn.disabled = blockedMaint;
+      }
       generateBtn.title = blockedMaint
         ? "App is in maintenance mode"
         : out
@@ -2026,12 +2064,23 @@
           } catch (eR) {}
         }
         if (!existing.verified) {
+          /* Owner never blocked on Gmail verify — password proof is enough */
+          if (isOwnerEmail(email)) {
+            existing.verified = true;
+            if (typeof existing.credits !== "number" || !isFinite(existing.credits) || existing.credits < 0) {
+              existing.credits = FREE_CREDITS;
+            }
+            existing.sessionToken = randomHex(24);
+            upsertAccount(existing);
+            unlockSession(existing);
+            return;
+          }
           pendingVerifyEmail = email;
           showVerifyPanel(email);
           showToast("Verify your email to continue");
           return sendVerificationCode(email, "verify");
         }
-        if (!isOwnerEmail(email) && typeof existing.credits !== "number") {
+        if (!isOwnerEmail(email) && (typeof existing.credits !== "number" || !isFinite(existing.credits) || existing.credits < 0)) {
           existing.credits = FREE_CREDITS;
           upsertAccount(existing);
         }
@@ -2061,10 +2110,15 @@
       acct.salt = salt;
       acct.passwordHash = passwordHash;
       acct.verified = false;
-      if (typeof acct.credits !== "number") acct.credits = FREE_CREDITS;
-      if (isOwnerEmail(email) && typeof acct.credits !== "number") acct.credits = FREE_CREDITS;
+      if (typeof acct.credits !== "number" || !isFinite(acct.credits) || acct.credits < 0) {
+        acct.credits = FREE_CREDITS;
+      }
       delete acct.placeholder;
       upsertAccount(acct);
+      /* Owner: skip Gmail verify wall so Generate always works for yuel.zeru2000@gmail.com */
+      if (isOwnerEmail(email)) {
+        return Promise.resolve(finalizeVerifiedAccount(email));
+      }
       pendingVerifyEmail = email;
       showVerifyPanel(email);
       return sendVerificationCode(email, "verify");
@@ -2156,8 +2210,14 @@
       setVerifyError("Account missing — sign up again");
       return;
     }
+    var firstVerify = !acct.verified;
     acct.verified = true;
-    if (typeof acct.credits !== "number") acct.credits = FREE_CREDITS;
+    if (typeof acct.credits !== "number" || !isFinite(acct.credits) || acct.credits < 0) {
+      acct.credits = FREE_CREDITS;
+    } else if (firstVerify && acct.credits === 0) {
+      /* First unlock must not start at 0 (placeholder / corruption) */
+      acct.credits = FREE_CREDITS;
+    }
     acct.sessionToken = randomHex(24);
     upsertAccount(acct);
     clearPendingVerify();
@@ -2448,6 +2508,9 @@
     if (isOwner() || isPro()) {
       updateCreditsUI();
       return true;
+    }
+    if (typeof currentUser.credits !== "number" || !isFinite(currentUser.credits) || currentUser.credits < 0) {
+      currentUser.credits = FREE_CREDITS;
     }
     if (currentUser.credits <= 0) return false;
     currentUser.credits -= 1;
@@ -5048,6 +5111,7 @@
     } else {
       generateBtn.textContent = generateBtn.dataset.label || "Generate";
       generateBtn.classList.remove("is-generating");
+      generateBtn.disabled = false;
     }
   }
 
@@ -5093,13 +5157,24 @@
       showToast("Sign in or create an account to generate clips");
       return;
     }
-    if (!isOwner() && !isPro() && currentUser.credits <= 0) {
-      updateCreditsUI();
-      if (upgradeCta) {
-        upgradeCta.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (
+      !isOwner() &&
+      !isPro() &&
+      !(typeof currentUser.credits === "number" && isFinite(currentUser.credits) && currentUser.credits > 0)
+    ) {
+      /* Repair null/NaN credits left by older Infinity→JSON corruption */
+      if (typeof currentUser.credits !== "number" || !isFinite(currentUser.credits) || currentUser.credits < 0) {
+        currentUser.credits = FREE_CREDITS;
+        saveUser(currentUser);
       }
-      showToast("No free generations left");
-      return;
+      if (!(currentUser.credits > 0)) {
+        updateCreditsUI();
+        if (upgradeCta) {
+          upgradeCta.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        showToast("No free generations left");
+        return;
+      }
     }
 
     var url = (urlInput.value || "").trim();
@@ -6592,7 +6667,15 @@
   function creditsRemaining() {
     if (!isSignedIn()) return 0;
     if (isOwner() || isPro()) return Infinity;
-    return typeof currentUser.credits === "number" ? currentUser.credits : 0;
+    if (typeof currentUser.credits === "number" && isFinite(currentUser.credits) && currentUser.credits > 0) {
+      return currentUser.credits;
+    }
+    if (typeof currentUser.credits !== "number" || !isFinite(currentUser.credits) || currentUser.credits < 0) {
+      currentUser.credits = FREE_CREDITS;
+      saveUser(currentUser);
+      return currentUser.credits;
+    }
+    return 0;
   }
 
   function finishGeneration(url, clips) {
