@@ -162,10 +162,13 @@ router.post('/stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
   const send = (obj) => {
-    res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    }
   };
 
   if (!getAiConfig()) {
@@ -182,21 +185,37 @@ router.post('/stream', async (req, res) => {
     return res.end();
   }
 
+  // IMPORTANT: Do NOT abort on req 'close'. On Node/Express the request
+  // 'close' often fires as soon as the body is consumed — that was aborting
+  // Groq immediately (AbortError → empty done). Only abort when the *response*
+  // socket closes before we finished writing (true client disconnect mid-stream).
   const ac = new AbortController();
-  req.on('close', () => ac.abort());
+  let clientGone = false;
+  const onClientDisconnect = () => {
+    if (!res.writableEnded) {
+      clientGone = true;
+      console.warn('[VOID AI] Client disconnected mid-stream — aborting upstream');
+      ac.abort();
+    }
+  };
+  res.on('close', onClientDisconnect);
 
   let full = '';
   let usedModel = null;
+  let streamError = null;
+  let wasAborted = false;
+
   try {
     const { body, model } = await streamChatCompletion({ messages, signal: ac.signal });
     usedModel = model;
     for await (const token of parseSSEStream(body)) {
+      if (ac.signal.aborted) break;
       full += token;
       send({ type: 'token', content: token });
     }
 
-    // gpt-oss and similar models may stream only into reasoning fields we already
-    // parse — but if the stream still produced nothing, fall back once non-stream.
+    // gpt-oss / qwen may stream only into reasoning fields we already parse —
+    // but if the stream still produced nothing, fall back once non-stream.
     if (!full && !ac.signal.aborted) {
       console.warn(`[VOID AI] Empty stream from ${usedModel}; trying non-stream fallback…`);
       const fallback = await nonStreamChatCompletion({
@@ -207,19 +226,43 @@ router.post('/stream', async (req, res) => {
       if (fallback.text) {
         full = fallback.text;
         send({ type: 'token', content: full });
+        console.log(`[VOID AI] Non-stream fallback succeeded (${full.length} chars) via ${fallback.model}`);
+      } else {
+        console.warn(`[VOID AI] Non-stream fallback also empty from ${fallback.model || usedModel}`);
       }
     }
   } catch (e) {
-    if (e.name === 'AbortError') {
-      // client stopped
+    if (e.name === 'AbortError' || ac.signal.aborted) {
+      wasAborted = true;
+      console.warn('[VOID AI] Upstream aborted (client disconnect or signal)');
     } else {
-      const errMsg = e.message || 'Stream failed';
-      if (!full) full = `Sorry — ${errMsg}`;
-      send({ type: 'error', error: errMsg });
+      streamError = e.message || 'Stream failed';
+      console.error(`[VOID AI] Stream error: ${streamError}`);
+      if (!full) {
+        full = `Sorry — ${streamError}`;
+        send({ type: 'token', content: full });
+      }
+      send({ type: 'error', error: streamError });
     }
+  } finally {
+    res.off?.('close', onClientDisconnect);
+    res.removeListener('close', onClientDisconnect);
   }
 
-  if (full) {
+  // Never send a silent empty done — always surface something if Groq failed
+  // and the client is still connected.
+  if (!full && !clientGone && !wasAborted) {
+    const fallbackMsg =
+      streamError
+        ? `Sorry — ${streamError}`
+        : 'VOID AI received an empty reply from the model. Please try again.';
+    console.warn(`[VOID AI] Emitting error token for empty reply (model=${usedModel || 'unknown'})`);
+    full = fallbackMsg;
+    send({ type: 'token', content: full });
+    send({ type: 'error', error: streamError || 'Empty model response' });
+  }
+
+  if (full && !clientGone) {
     const aid = uuidv4();
     const now = new Date().toISOString();
     db.prepare(
@@ -227,10 +270,12 @@ router.post('/stream', async (req, res) => {
     ).run(aid, conv.id, full, now);
     db.prepare(`UPDATE conversations SET updated_at = ? WHERE id = ?`).run(now, conv.id);
     send({ type: 'done', message_id: aid });
-  } else {
+  } else if (!clientGone) {
+    // Client still here but nothing to persist (aborted with no tokens)
     send({ type: 'done', message_id: null });
   }
-  res.end();
+
+  if (!res.writableEnded) res.end();
 });
 
 router.get('/tools', (req, res) => {

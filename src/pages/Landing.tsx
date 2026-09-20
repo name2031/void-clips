@@ -79,7 +79,7 @@ export default function Landing() {
       <header className="hero">
         <div className="hero-badge">
           <span className="pulse-dot" />
-          Intelligent · Minimal · Fast
+          Premium AI workspace
         </div>
         <h1 className="hero-title">
           Into the <em>void</em>.
@@ -108,7 +108,8 @@ export default function Landing() {
       <div className="sections">
         <div className="section-head">
           <p className="section-kicker">Capabilities</p>
-          <h2 className="section-title">Built like a product, not a demo</h2>
+          <h2 className="section-title">One coherent product</h2>
+          <p className="section-sub">Chat, projects, files, and memory — designed to compound.</p>
         </div>
         <div className="grid-3">
           {FEATURES.map((f) => (

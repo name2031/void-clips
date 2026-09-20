@@ -7,12 +7,14 @@ export type Msg = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   streaming?: boolean;
+  error?: boolean;
 };
 
 type Props = {
   msg: Msg;
   onCopy?: () => void;
   onRegenerate?: () => void;
+  onRetry?: () => void;
   onEdit?: () => void;
   isLastAssistant?: boolean;
   isLastUser?: boolean;
@@ -22,13 +24,24 @@ export default function MessageBubble({
   msg,
   onCopy,
   onRegenerate,
+  onRetry,
   onEdit,
   isLastAssistant,
   isLastUser,
 }: Props) {
   if (msg.role === 'system') return null;
+
+  const isError =
+    msg.error ||
+    (msg.role === 'assistant' &&
+      !msg.streaming &&
+      !!msg.content &&
+      (/^Error:/i.test(msg.content) || /^Sorry —/i.test(msg.content)));
+
   return (
-    <div className={`msg ${msg.role}${msg.streaming ? ' streaming' : ''}`}>
+    <div
+      className={`msg ${msg.role}${msg.streaming ? ' streaming' : ''}${isError ? ' is-error' : ''}`}
+    >
       <div className="msg-avatar" aria-hidden>
         {msg.role === 'assistant' ? 'V' : 'U'}
       </div>
@@ -37,16 +50,33 @@ export default function MessageBubble({
         <div className="msg-content">
           {msg.role === 'assistant' ? (
             <>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {msg.content || ''}
-              </ReactMarkdown>
-              {msg.streaming && <span className="stream-caret" aria-hidden />}
-              {msg.streaming && !msg.content && (
-                <span className="thinking">
+              {msg.streaming && !msg.content ? (
+                <span className="thinking" aria-label="Thinking">
                   <span className="thinking-dot" />
                   <span className="thinking-dot" />
                   <span className="thinking-dot" />
+                  <span className="thinking-label">Thinking</span>
                 </span>
+              ) : (
+                <>
+                  {isError ? (
+                    <div className="msg-error-banner" role="alert">
+                      <span className="msg-error-ico" aria-hidden>
+                        !
+                      </span>
+                      <div>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                          {msg.content || ''}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                      {msg.content || ''}
+                    </ReactMarkdown>
+                  )}
+                  {msg.streaming && msg.content && <span className="stream-caret" aria-hidden />}
+                </>
               )}
             </>
           ) : (
@@ -54,17 +84,29 @@ export default function MessageBubble({
           )}
         </div>
         <div className="msg-actions">
-          <button className="btn btn-ghost btn-sm" onClick={onCopy}>
-            Copy
-          </button>
+          {!isError && (
+            <button className="btn btn-ghost btn-sm" onClick={onCopy}>
+              Copy
+            </button>
+          )}
           {isLastUser && onEdit && (
             <button className="btn btn-ghost btn-sm" onClick={onEdit}>
               Edit
             </button>
           )}
-          {isLastAssistant && onRegenerate && (
+          {isError && onRetry && (
+            <button className="btn btn-secondary btn-sm" onClick={onRetry}>
+              Retry
+            </button>
+          )}
+          {isLastAssistant && onRegenerate && !isError && (
             <button className="btn btn-ghost btn-sm" onClick={onRegenerate}>
               Regenerate
+            </button>
+          )}
+          {isLastAssistant && isError && onRegenerate && !onRetry && (
+            <button className="btn btn-secondary btn-sm" onClick={onRegenerate}>
+              Retry
             </button>
           )}
         </div>

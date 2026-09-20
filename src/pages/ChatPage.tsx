@@ -26,7 +26,9 @@ export default function ChatPage() {
   const [convId, setConvId] = useState<string | null>(id || null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const runStreamRef = useRef<(body: Record<string, unknown>, optimisticUser?: Msg) => Promise<void>>(async () => {});
+  const runStreamRef = useRef<(body: Record<string, unknown>, optimisticUser?: Msg) => Promise<void>>(
+    async () => {}
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -103,48 +105,90 @@ export default function ChatPage() {
     }
 
     const assistantId = 'streaming-' + Date.now();
-    setMessages((m) => [...m, { id: assistantId, role: 'assistant', content: '', streaming: true }]);
+    setMessages((m) => [
+      ...m,
+      { id: assistantId, role: 'assistant', content: '', streaming: true, error: false },
+    ]);
     setStreaming(true);
 
     const ac = new AbortController();
     abortRef.current = ac;
 
     let acc = '';
+    let hadError = false;
     try {
       await streamChat(
         body,
         {
           onToken: (t) => {
             acc += t;
-            setMessages((m) => m.map((x) => (x.id === assistantId ? { ...x, content: acc } : x)));
+            setMessages((m) =>
+              m.map((x) => (x.id === assistantId ? { ...x, content: acc, error: false } : x))
+            );
           },
           onDone: (messageId) => {
+            const emptyFail = !acc.trim();
             setMessages((m) =>
               m.map((x) =>
-                x.id === assistantId ? { ...x, id: messageId || x.id, streaming: false, content: acc } : x
+                x.id === assistantId
+                  ? {
+                      ...x,
+                      id: messageId || x.id,
+                      streaming: false,
+                      content: emptyFail
+                        ? 'VOID AI returned an empty reply. Tap Retry to try again.'
+                        : acc,
+                      error: emptyFail || hadError,
+                    }
+                  : x
               )
             );
             refreshConvs();
           },
           onError: (err) => {
+            hadError = true;
             if (!acc) {
+              acc = `Error: ${err}`;
               setMessages((m) =>
                 m.map((x) =>
-                  x.id === assistantId ? { ...x, content: `Error: ${err}`, streaming: false } : x
+                  x.id === assistantId
+                    ? { ...x, content: acc, streaming: false, error: true }
+                    : x
                 )
+              );
+            } else {
+              setMessages((m) =>
+                m.map((x) => (x.id === assistantId ? { ...x, error: true } : x))
               );
             }
           },
         },
         ac.signal
       );
+
+      // If stream ended with no tokens and no error event, mark as error
+      if (!acc.trim() && !hadError) {
+        const msg = 'VOID AI returned an empty reply. Tap Retry to try again.';
+        setMessages((m) =>
+          m.map((x) =>
+            x.id === assistantId || x.streaming
+              ? { ...x, content: msg, streaming: false, error: true }
+              : x
+          )
+        );
+      }
     } catch (e) {
       if ((e as Error).name !== 'AbortError') {
         const msg = e instanceof Error ? e.message : 'Failed';
         setMessages((m) =>
           m.map((x) =>
-            x.id === assistantId && !x.content
-              ? { ...x, content: `Error: ${msg}`, streaming: false }
+            x.id === assistantId
+              ? {
+                  ...x,
+                  content: x.content || `Error: ${msg}`,
+                  streaming: false,
+                  error: true,
+                }
               : { ...x, streaming: false }
           )
         );
@@ -198,6 +242,11 @@ export default function ChatPage() {
     await runStream({ regenerate: true, conversation_id: convId });
   };
 
+  const retryFailed = async () => {
+    if (streaming || !convId) return;
+    await regenerate();
+  };
+
   const startEdit = (msg: Msg) => {
     setEditingId(msg.id);
     setInput(msg.content);
@@ -206,6 +255,13 @@ export default function ChatPage() {
 
   const lastUserIdx = [...messages].map((m) => m.role).lastIndexOf('user');
   const lastAsstIdx = [...messages].map((m) => m.role).lastIndexOf('assistant');
+  const lastAsst = lastAsstIdx >= 0 ? messages[lastAsstIdx] : null;
+  const lastIsError =
+    !!lastAsst &&
+    (lastAsst.error ||
+      /^Error:/i.test(lastAsst.content) ||
+      /^Sorry —/i.test(lastAsst.content) ||
+      /empty reply/i.test(lastAsst.content));
 
   return (
     <>
@@ -243,6 +299,7 @@ export default function ChatPage() {
               isLastAssistant={i === lastAsstIdx && !streaming}
               onCopy={() => navigator.clipboard.writeText(m.content)}
               onRegenerate={i === lastAsstIdx ? regenerate : undefined}
+              onRetry={i === lastAsstIdx && lastIsError ? retryFailed : undefined}
               onEdit={i === lastUserIdx ? () => startEdit(m) : undefined}
             />
           ))}

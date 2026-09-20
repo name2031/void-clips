@@ -78,12 +78,21 @@ export default function AppLayout() {
       />
       <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="sidebar-header">
-          <Link to="/" className="logo logo-mark">
+          <Link to="/" className="logo logo-mark" onClick={() => setSidebarOpen(false)}>
             VOID <span>AI</span>
           </Link>
-          <button className="btn btn-secondary btn-sm" onClick={newChat} title="New chat">
-            + New
-          </button>
+          <div className="sidebar-header-actions">
+            <button className="btn btn-secondary btn-sm" onClick={newChat} title="New chat">
+              + New
+            </button>
+            <button
+              className="btn btn-ghost btn-sm sidebar-close"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <nav className="sidebar-nav">
           <NavLink
