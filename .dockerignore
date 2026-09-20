@@ -1,0 +1,9 @@
+node_modules
+server/node_modules
+server/.data
+.env
+server/.env
+*.zip
+.git
+PC_SYNC.txt
+LOCAL_API_KEY.txt

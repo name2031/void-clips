@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>App — VOID Clips</title>
+  <meta name="description" content="VOID Clips demo app — paste a YouTube or TikTok link, generate sample viral clips with captions &amp; hashtags. 10 free gens on first sign-in. Local only · by @V_O_I_.D." />
+  <meta name="author" content="Yuel (@V_O_I_.D)" />
+  <meta name="theme-color" content="#050506" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="VOID Clips" />
+  <meta property="og:title" content="App — VOID Clips" />
+  <meta property="og:description" content="Paste a link → demo viral clips out. 10 free gens. Captions, hashtags, EN/SV. Built by @V_O_I_.D." />
+  <meta property="og:image" content="assets/pfp.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="App — VOID Clips" />
+  <meta name="twitter:description" content="Paste a link → demo viral clips. 10 free gens. By @V_O_I_.D." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23050506'/%3E%3Ccircle cx='16' cy='16' r='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23c4b5fd'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#url-input">Skip to app</a>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Shown only for file:// — http/https (incl. PUBLIC_BASE) is OK -->
+  <div id="origin-banner" class="origin-banner" hidden role="status">
+    <div class="container origin-banner-inner">
+      <span class="origin-banner-text"><strong>Wrong open URL</strong> — open the live site (or local server), not <code>file://</code>. Demo codes only on this origin.</span>
+      <button type="button" id="origin-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Soft launch banner -->
+  <div id="beta-banner" class="beta-banner" hidden role="status">
+    <div class="container beta-banner-inner">
+      <span class="beta-banner-text"><strong>Live</strong> — public demo. Real Gmail verify when Resend is configured.</span>
+      <button type="button" id="beta-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss banner">Dismiss</button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-mark" aria-hidden="true">
+          <img class="logo-img" src="assets/pfp.png" alt="" onload="this.parentElement.classList.add('has-img')" onerror="this.hidden=true" />
+        </span>
+        VOID Clips
+      </a>
+      <ul class="nav-links">
+        <li id="nav-credits" class="nav-credits" hidden>
+          <span id="credits-pill" class="credits-pill" title="Free demo generations left">—</span>
+        </li>
+        <li id="nav-pro-badge" class="nav-pro-badge" hidden>
+          <span class="pro-badge" title="Pro entitlement active">Pro</span>
+        </li>
+        <li id="nav-owner-badge" class="nav-owner-badge" hidden>
+          <span class="owner-badge" title="Owner account">Owner</span>
+        </li>
+        <li id="nav-user" class="nav-user" hidden>
+          <span id="user-name" class="user-name"></span>
+          <button type="button" id="owner-panel-btn" class="btn btn-ghost btn-sm-nav" hidden>Owner Panel</button>
+          <button type="button" id="pricing-btn" class="btn btn-ghost btn-sm-nav" title="Pricing">Pricing</button>
+          <button type="button" id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </button>
+          <button type="button" id="sign-out-btn" class="sign-out-link">Sign out</button>
+        </li>
+        <li><a href="index.html">Home</a></li>
+        <li>
+          <a href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm-nav">@V_O_I_.D</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Auth gate (localStorage accounts · password + Gmail verify via local server · demo fallback) -->
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-card">
+      <div class="auth-mark" aria-hidden="true">
+        <span class="logo-mark logo-mark-lg">
+          <img class="logo-img" src="assets/pfp.png" alt="" onload="this.parentElement.classList.add('has-img')" onerror="this.hidden=true" />
+        </span>
+      </div>
+      <h1 id="auth-title">Welcome to VOID</h1>
+      <p class="auth-sub" id="auth-sub">Sign in or create an account. <strong>Strong password</strong> · email verify required · local only.</p>
+
+      <div id="auth-signin-panel">
+        <div class="auth-tabs" role="tablist" aria-label="Account">
+          <button type="button" class="auth-tab is-active" id="tab-signin" role="tab" aria-selected="true">Sign in</button>
+          <button type="button" class="auth-tab" id="tab-signup" role="tab" aria-selected="false">Create account</button>
+        </div>
+        <form id="auth-form" class="auth-form">
+          <input type="hidden" id="auth-mode" value="signin" />
+          <label class="input-label" for="auth-identity">Email</label>
+          <input
+            id="auth-identity"
+            class="auth-input"
+            type="email"
+            placeholder="you@email.com"
+            autocomplete="username"
+            required
+            maxlength="80"
+          />
+          <label class="input-label" for="auth-password">Password</label>
+          <input
+            id="auth-password"
+            class="auth-input"
+            type="password"
+            placeholder="Min 10 · upper + lower + number"
+            autocomplete="current-password"
+            required
+            minlength="10"
+            maxlength="128"
+          />
+          <p id="auth-pw-hint" class="auth-pw-hint" hidden aria-live="polite">Min 10 · upper + lower + number</p>
+          <div id="auth-password-confirm-wrap" hidden>
+            <label class="input-label" for="auth-password-confirm">Confirm password</label>
+            <input
+              id="auth-password-confirm"
+              class="auth-input"
+              type="password"
+              placeholder="Repeat password"
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="128"
+            />
+          </div>
+          <label class="auth-check" id="auth-remember-wrap">
+            <input type="checkbox" id="auth-remember" />
+            <span>Remember this device</span>
+          </label>
+          <p id="auth-error" class="auth-error" hidden role="alert"></p>
+          <button type="submit" class="btn btn-primary btn-lg btn-block btn-glow" id="auth-submit-btn">Sign in</button>
+        </form>
+        <p class="auth-forgot-row" id="auth-forgot-row">
+          <button type="button" class="auth-link-btn" id="forgot-password-btn">Forgot password?</button>
+        </p>
+        <p class="auth-switch" id="auth-switch-hint">No account yet? Tap <strong>Create account</strong>.</p>
+      </div>
+
+      <div id="auth-forgot-panel" class="auth-forgot-panel" hidden>
+        <p class="auth-verify-lead" id="forgot-lead">Enter your email. We’ll send a <strong>6-digit reset code</strong> (same as verify — demo fallback shows the code).</p>
+        <form id="forgot-email-form" class="auth-form">
+          <label class="input-label" for="forgot-email">Email</label>
+          <input
+            id="forgot-email"
+            class="auth-input"
+            type="email"
+            placeholder="you@email.com"
+            autocomplete="username"
+            required
+            maxlength="80"
+          />
+          <p id="forgot-error" class="auth-error" hidden role="alert"></p>
+          <button type="submit" class="btn btn-primary btn-lg btn-block btn-glow" id="forgot-send-btn">Send reset code</button>
+        </form>
+        <form id="forgot-reset-form" class="auth-form" hidden>
+          <label class="input-label" for="forgot-code">Reset code</label>
+          <input
+            id="forgot-code"
+            class="auth-input auth-code-input"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            placeholder="••••••"
+            autocomplete="one-time-code"
+            required
+          />
+          <label class="input-label" for="forgot-new-password">New password</label>
+          <input
+            id="forgot-new-password"
+            class="auth-input"
+            type="password"
+            placeholder="Min 10 · upper + lower + number"
+            autocomplete="new-password"
+            required
+            minlength="10"
+            maxlength="128"
+          />
+          <label class="input-label" for="forgot-new-password-confirm">Confirm new password</label>
+          <input
+            id="forgot-new-password-confirm"
+            class="auth-input"
+            type="password"
+            placeholder="Repeat new password"
+            autocomplete="new-password"
+            required
+            minlength="10"
+            maxlength="128"
+          />
+          <p id="forgot-reset-error" class="auth-error" hidden role="alert"></p>
+          <button type="submit" class="btn btn-primary btn-lg btn-block btn-glow" id="forgot-save-btn">Save &amp; sign in</button>
+        </form>
+        <div class="auth-verify-actions">
+          <button type="button" class="btn btn-ghost btn-block" id="forgot-resend-btn" hidden>Resend reset code</button>
+          <button type="button" class="btn btn-ghost btn-block" id="forgot-back-btn">Back to sign in</button>
+        </div>
+        <p id="forgot-demo-warn" class="auth-warn" hidden role="status">Not secure — start server for real Gmail</p>
+      </div>
+
+      <div id="auth-verify-panel" class="auth-verify-panel" hidden>
+        <p class="auth-verify-lead">Enter the <strong>6-digit code</strong> for <span id="verify-email-label" class="verify-email-label"></span></p>
+        <form id="verify-form" class="auth-form">
+          <label class="input-label" for="verify-code">Verification code</label>
+          <input
+            id="verify-code"
+            class="auth-input auth-code-input"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{6}"
+            maxlength="6"
+            placeholder="••••••"
+            autocomplete="one-time-code"
+            required
+          />
+          <p id="verify-error" class="auth-error" hidden role="alert"></p>
+          <button type="submit" class="btn btn-primary btn-lg btn-block btn-glow">Verify &amp; unlock</button>
+        </form>
+        <div class="auth-verify-actions">
+          <button type="button" class="btn btn-ghost btn-block" id="send-code-btn">Resend verification code</button>
+          <button type="button" class="btn btn-ghost btn-block" id="verify-back-btn">Back to sign in</button>
+        </div>
+        <p class="auth-note" id="verify-api-note">Prefers real email via local server. Demo fallback only if API unavailable (see warning).</p>
+        <p id="verify-demo-warn" class="auth-warn" hidden role="status">Not secure — start server for real Gmail</p>
+      </div>
+
+      <p class="auth-note" id="auth-footer-note">Salted SHA-256 · session · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="privacy.html#help">Help</a></p>
+    </div>
+  </div>
+
+  <!-- Maintenance / update mode (non-owners blocked) -->
+  <div id="maintenance-overlay" class="maintenance-overlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="maintenance-title">
+    <div class="maintenance-card">
+      <div class="maintenance-orb" aria-hidden="true"></div>
+      <p class="maintenance-eyebrow">Update mode</p>
+      <h1 id="maintenance-title">VOID Clips is updating — back soon</h1>
+      <p class="maintenance-sub">We’re shipping improvements. Non-owner access is paused. Check back shortly.</p>
+      <a href="index.html" class="btn btn-ghost">← Home</a>
+    </div>
+  </div>
+
+  <!-- Demo verification code reveal (fallback only) -->
+  <div id="demo-code-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="demo-code-title">
+    <div class="modal-card modal-card-sm">
+      <p class="modal-eyebrow">Demo fallback · not secure</p>
+      <h2 id="demo-code-title">Your code</h2>
+      <p class="modal-sub">API unavailable. Copy the code into the verify or reset form.</p>
+      <p class="auth-warn" role="status">Not secure — start server for real Gmail</p>
+      <p id="demo-code-value" class="demo-code-value" aria-live="polite">————</p>
+      <button type="button" class="btn btn-primary btn-block" id="demo-code-close">Got it</button>
+    </div>
+  </div>
+
+  <main id="app-main" class="container app-wrap" hidden>
+    <div class="app-header">
+      <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
+      <h1>Generate clips</h1>
+      <p>Paste a link. Pick a style. Demo returns sample clips — not real AI.</p>
+    </div>
+
+    <div class="input-card">
+      <label class="input-label" for="url-input">Video URL</label>
+      <div class="url-row">
+        <div class="url-field">
+          <input
+            id="url-input"
+            class="url-input"
+            type="url"
+            placeholder="Paste YouTube or TikTok link…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span id="paste-hint" class="paste-hint" hidden>Detected link</span>
+        </div>
+        <button id="generate-btn" class="btn btn-primary" type="button">Generate</button>
+      </div>
+
+      <div class="controls-row">
+        <div class="control-group">
+          <span class="input-label">Style</span>
+          <div class="segmented" id="style-presets" role="group" aria-label="Clip style">
+            <button type="button" class="seg-btn active" data-style="viral">Viral Hook</button>
+            <button type="button" class="seg-btn" data-style="story">Story</button>
+            <button type="button" class="seg-btn" data-style="funny">Funny</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <span class="input-label">Titles</span>
+          <div class="segmented" id="lang-toggle" role="group" aria-label="Title language">
+            <button type="button" class="seg-btn active" data-lang="en">EN</button>
+            <button type="button" class="seg-btn" data-lang="sv">SV</button>
+            <button type="button" class="seg-btn" data-lang="both">EN+SV</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <span class="input-label">Aspect</span>
+          <div class="segmented" id="aspect-toggle" role="group" aria-label="Clip aspect ratio">
+            <button type="button" class="seg-btn active" data-aspect="9:16">9:16</button>
+            <button type="button" class="seg-btn" data-aspect="1:1">1:1</button>
+            <button type="button" class="seg-btn" data-aspect="16:9">16:9</button>
+          </div>
+        </div>
+
+        <div class="control-group control-void-mode">
+          <span class="input-label" id="void-mode-label">VOID mode</span>
+          <button
+            type="button"
+            id="void-mode-toggle"
+            class="void-mode-toggle is-on"
+            role="switch"
+            aria-checked="true"
+            aria-labelledby="void-mode-label"
+            title="Emphasize Resonance on clip cards"
+          >
+            <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+            <span id="void-mode-status" class="void-mode-status">On</span>
+          </button>
+          <p class="void-mode-hint">Resonance score, voice &amp; pin bait</p>
+        </div>
+      </div>
+
+      <div class="platform-hints">
+        <span class="chip">YouTube</span>
+        <span class="chip">TikTok</span>
+        <span class="chip">Demo · no processing</span>
+      </div>
+
+      <div id="recent-links" class="recent-links" hidden>
+        <span class="input-label">Recent</span>
+        <div id="recent-list" class="recent-list"></div>
+      </div>
+
+      <p class="kbd-hint"><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> to generate · <kbd>Esc</kbd> clears</p>
+    </div>
+
+    <!-- Out of credits / upgrade CTA -->
+    <div id="upgrade-cta" class="upgrade-cta" hidden>
+      <div class="upgrade-orb" aria-hidden="true"></div>
+      <p class="upgrade-eyebrow">Out of free generations</p>
+      <h2>You’re on the waitlist path</h2>
+      <p>You’ve used your 10 free demo generations. Upgrade to Pro (Swish or card) for unlimited gens + download unlock for the period, or redeem an owner code.</p>
+      <form id="upgrade-waitlist-form" class="upgrade-waitlist-form">
+        <input id="upgrade-waitlist-email" type="email" placeholder="you@email.com" required autocomplete="email" />
+        <button type="submit" class="btn btn-primary btn-lg btn-glow">Join waitlist</button>
+      </form>
+      <p id="upgrade-waitlist-msg" class="waitlist-msg upgrade-waitlist-msg"></p>
+      <div class="upgrade-actions">
+        <a href="#waitlist-form" class="btn btn-ghost">Scroll to waitlist</a>
+        <button type="button" class="btn btn-primary" id="upgrade-pro-btn" title="Open pricing">Upgrade to Pro</button>
+      </div>
+      <p class="upgrade-note">Live · Swish (Sweden) · optional Stripe card · Owner codes · Real AI later</p>
+    </div>
+
+    <div id="error-state" class="state-panel state-error" hidden role="alert">
+      <p class="state-title">Need a valid link</p>
+      <p>Paste a YouTube or TikTok URL, then hit Generate.</p>
+    </div>
+
+    <div id="loading" class="loading-panel" aria-live="polite">
+      <div class="spinner" role="status" aria-label="Loading"></div>
+      <p class="loading-title">Working on your clips…</p>
+      <ol class="progress-steps" id="progress-steps">
+        <li data-step="0" class="prog-step">Fetch</li>
+        <li data-step="1" class="prog-step">Find hooks</li>
+        <li data-step="2" class="prog-step">Cut clips</li>
+      </ol>
+      <p id="loading-status" class="loading-status">Fetching video…</p>
+    </div>
+
+    <div id="empty-state" class="state-panel state-empty">
+      <div class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="10" y="6" width="28" height="36" rx="4"/><path d="M18 16h12M18 24h12M18 32h8"/><circle cx="34" cy="34" r="8" fill="#050506" stroke="currentColor"/><path d="M31 34l2.5 2.5L38 32"/></svg>
+      </div>
+      <p class="state-title">No clips yet</p>
+      <p>Paste a link above and generate. Demo returns 4 sample cards with <strong>VOID Resonance</strong>.</p>
+      <ol class="empty-checklist">
+        <li>Paste a YouTube or TikTok URL</li>
+        <li>Pick Viral / Story / Funny + EN/SV</li>
+        <li>Hit Generate — copy captions when ready</li>
+      </ol>
+    </div>
+
+    <div id="results" class="results">
+      <div class="results-header">
+        <h2>Your clips</h2>
+        <div class="results-header-actions">
+          <span id="results-meta" class="results-meta">4 clips · demo</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="copy-all-captions" title="Copy every caption + hashtags">Copy all captions</button>
+        </div>
+      </div>
+      <div id="clips-grid" class="clips-grid aspect-9-16"></div>
+      <div class="hashtag-pack" id="hashtag-pack">
+        <div class="hashtag-pack-head">
+          <span class="input-label">Hashtag pack</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="copy-hashtags">Copy all</button>
+        </div>
+        <p id="hashtag-text" class="hashtag-text"></p>
+      </div>
+      <div class="export-pack">
+        <div class="export-pack-head">
+          <span class="input-label">Export pack</span>
+          <span class="export-hint">Demo · captions only</span>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="copy-export-pack">Copy all captions</button>
+      </div>
+    </div>
+
+    <div class="waitlist" id="waitlist-form-section">
+      <h3>Get notified when live AI ships</h3>
+      <p>Free waitlist now. Pro downloads when real clipping goes live. No payment today.</p>
+      <form id="waitlist-form" class="waitlist-form">
+        <input id="waitlist-email" type="email" placeholder="you@email.com" required autocomplete="email" />
+        <button type="submit" class="btn btn-primary">Join waitlist</button>
+      </form>
+      <p id="waitlist-msg" class="waitlist-msg"></p>
+    </div>
+
+    <div class="app-footer-links">
+      <button type="button" id="report-bug-btn" class="linkish linkish-primary">Need help?</button>
+      <span aria-hidden="true">·</span>
+      <button type="button" id="report-bug-secondary-btn" class="linkish">Report a bug</button>
+      <span aria-hidden="true">·</span>
+      <a href="terms.html">Terms</a>
+      <span aria-hidden="true">·</span>
+      <a href="privacy.html">Privacy</a>
+      <span aria-hidden="true">·</span>
+      <a href="privacy.html#help">Support</a>
+    </div>
+  </main>
+
+  <!-- Onboarding checklist modal -->
+  <div id="onboarding-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div class="modal-card">
+      <p class="modal-eyebrow">First run</p>
+      <h2 id="onboarding-title">Quick start checklist</h2>
+      <p class="modal-sub">You’re signed in with 10 free demo gens. Here’s the loop:</p>
+      <ul class="onboard-list" id="onboard-list">
+        <li data-step="paste"><span class="onboard-check" aria-hidden="true"></span> Paste a YouTube or TikTok URL</li>
+        <li data-step="style"><span class="onboard-check" aria-hidden="true"></span> Pick style + titles language</li>
+        <li data-step="aspect"><span class="onboard-check" aria-hidden="true"></span> Choose aspect (9:16 / 1:1 / 16:9)</li>
+        <li data-step="generate"><span class="onboard-check" aria-hidden="true"></span> Hit Generate — get 4 sample clips</li>
+        <li data-step="copy"><span class="onboard-check" aria-hidden="true"></span> Copy captions, Resonance hooks, or pin bait</li>
+      </ul>
+      <p class="modal-note">Demo only — not real AI. Data stays in localStorage.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary btn-block" id="onboarding-done">Got it — let’s clip</button>
+        <button type="button" class="btn btn-ghost btn-block" id="onboarding-skip">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card modal-card-sm">
+      <h2 id="settings-title">Settings</h2>
+      <p class="modal-sub">Local prefs only. Nothing syncs to a server.</p>
+
+      <div class="settings-block">
+        <p class="input-label">Account</p>
+        <form id="change-password-form" class="auth-form settings-pw-form">
+          <label class="input-label" for="change-pw-current">Current password</label>
+          <input id="change-pw-current" class="auth-input" type="password" autocomplete="current-password" required minlength="10" maxlength="128" />
+          <label class="input-label" for="change-pw-new">New password</label>
+          <input id="change-pw-new" class="auth-input" type="password" autocomplete="new-password" required minlength="10" maxlength="128" placeholder="Min 10 · upper + lower + number" />
+          <label class="input-label" for="change-pw-confirm">Confirm new password</label>
+          <input id="change-pw-confirm" class="auth-input" type="password" autocomplete="new-password" required minlength="10" maxlength="128" />
+          <p id="change-pw-error" class="auth-error" hidden role="alert"></p>
+          <p id="change-pw-ok" class="auth-ok" hidden role="status"></p>
+          <button type="submit" class="btn btn-ghost btn-block" id="change-pw-btn">Change password</button>
+        </form>
+        <button type="button" class="btn btn-ghost btn-block" id="settings-sign-out-btn" style="margin-top:0.55rem">Sign out</button>
+      </div>
+
+      <div class="settings-block">
+        <p class="input-label">History</p>
+        <button type="button" class="btn btn-ghost btn-block" id="clear-history-btn">Clear recent links</button>
+      </div>
+
+      <div class="settings-block settings-dev">
+        <p class="input-label">Dev only <span class="dev-pill">testing</span></p>
+        <p class="settings-hint">Reset free credits to 10 for local QA. Not a real purchase.</p>
+        <button type="button" class="btn btn-ghost btn-block" id="reset-credits-btn">Reset credits to 10</button>
+        <p class="settings-hint" style="margin-top:0.75rem">Clears the local session token if you get stuck (does not delete your account).</p>
+        <button type="button" class="btn btn-ghost btn-block" id="reset-session-btn">Reset my local session</button>
+      </div>
+
+      <div id="owner-admin-panel" class="settings-block settings-owner" hidden>
+        <p class="input-label">Owner admin <span class="owner-pill">owner</span></p>
+        <p class="settings-hint">Full controls live in the Owner Panel. Quick toggle here.</p>
+        <div class="owner-toggle-row">
+          <div>
+            <p class="owner-toggle-label">Maintenance / update mode</p>
+            <p class="settings-hint" style="margin:0.2rem 0 0">Blocks non-owners. You stay in.</p>
+          </div>
+          <button
+            type="button"
+            id="maintenance-toggle"
+            class="void-mode-toggle"
+            role="switch"
+            aria-checked="false"
+            aria-label="Toggle maintenance mode"
+          >
+            <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+            <span id="maintenance-toggle-status" class="void-mode-status">Off</span>
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="open-owner-panel-from-settings" style="margin-top:0.75rem">Open Owner Panel</button>
+      </div>
+
+      <div class="settings-block">
+        <p class="input-label">Legal</p>
+        <p class="settings-links"><a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a></p>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-block" id="settings-close">Close</button>
+    </div>
+  </div>
+
+  <!-- Help / support modal -->
+  <div id="bug-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="bug-title">
+    <div class="modal-card">
+      <h2 id="bug-title">Need help?</h2>
+      <p class="modal-sub">Email <strong>yuel.zeru2000@gmail.com</strong> — KING/Yuel will reply. Use subject <code>VOID Clips Support</code> (or <code>VOID Clips Bug</code>).</p>
+      <form id="bug-form" class="bug-form">
+        <label class="input-label" for="bug-text">Your message</label>
+        <textarea id="bug-text" class="bug-textarea" rows="4" maxlength="1000" placeholder="Describe your question or what went wrong…"></textarea>
+        <div class="modal-actions row">
+          <a id="bug-mailto" class="btn btn-primary" href="mailto:yuel.zeru2000@gmail.com?subject=VOID%20Clips%20Support">Email support</a>
+          <button type="submit" class="btn btn-ghost">Save locally</button>
+        </div>
+      </form>
+      <p class="settings-hint" style="margin-top:0.65rem">Local save stays on this device only. Real help comes via Gmail.</p>
+      <button type="button" class="btn btn-ghost btn-block" id="bug-close" style="margin-top:0.65rem">Cancel</button>
+    </div>
+  </div>
+
+
+  <!-- Owner Panel (owner only) -->
+  <div id="owner-panel" class="owner-panel" hidden>
+    <div class="container owner-panel-inner">
+      <div class="owner-panel-head">
+        <div>
+          <p class="modal-eyebrow">Owner</p>
+          <h1>Owner Panel</h1>
+          <p class="modal-sub">Local controls · Swish pending · gift codes · grants · waitlist · local help reports · stats.</p>
+        </div>
+        <button type="button" class="btn btn-ghost" id="owner-panel-close">← Back to app</button>
+      </div>
+
+      <div class="owner-grid">
+        <section class="owner-card">
+          <h2>Maintenance</h2>
+          <p class="settings-hint">When <strong>On</strong>, non-owners see the update screen. Owner always bypasses. Toggle off when ready.</p>
+          <div class="owner-toggle-row">
+            <p class="owner-toggle-label">Update mode</p>
+            <button type="button" id="owner-maint-toggle" class="void-mode-toggle" role="switch" aria-checked="false" aria-label="Toggle maintenance">
+              <span class="void-mode-track" aria-hidden="true"><span class="void-mode-thumb"></span></span>
+              <span id="owner-maint-status" class="void-mode-status">Off</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="owner-card owner-card-wide" id="swish-pending-card">
+          <h2>Swish pending</h2>
+          <p class="settings-hint">Buyers send money to your Swish with a unique <code>VOID-XXXX</code> ref. Confirm only after you see the payment in Swish. <strong>Confirm</strong> grants Pro; <strong>Reject</strong> cancels.</p>
+          <div class="owner-form-row" style="margin-bottom:0.65rem">
+            <button type="button" class="btn btn-ghost" id="swish-pending-refresh">Refresh</button>
+            <span id="swish-pending-count" class="settings-hint" style="margin:0">—</span>
+          </div>
+          <div id="swish-pending-list" class="swish-pending-list"></div>
+        </section>
+
+        <section class="owner-card">
+          <h2>Gift / redeem codes</h2>
+          <p class="settings-hint">Create codes for Pro duration. <strong>Revoke</strong> stops new redemptions (confirm required).</p>
+          <form id="gift-code-form" class="owner-form">
+            <label class="input-label" for="gift-code-custom">Code (blank = random)</label>
+            <input id="gift-code-custom" class="auth-input" type="text" maxlength="32" placeholder="VOID-XXXX or leave blank" autocomplete="off" />
+            <label class="input-label" for="gift-duration">Duration</label>
+            <select id="gift-duration" class="auth-input">
+              <option value="7">7 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="90">90 days</option>
+              <option value="365">1 year</option>
+              <option value="custom">Custom days…</option>
+            </select>
+            <label class="input-label" for="gift-custom-days" id="gift-custom-days-label" hidden>Custom days</label>
+            <input id="gift-custom-days" class="auth-input" type="number" min="1" max="3650" value="14" hidden />
+            <label class="input-label" for="gift-max-redemptions">Max redemptions</label>
+            <input id="gift-max-redemptions" class="auth-input" type="number" min="1" max="10000" value="1" />
+            <button type="submit" class="btn btn-primary btn-block">Create code</button>
+          </form>
+          <div id="gift-codes-list" class="gift-codes-list"></div>
+        </section>
+
+        <section class="owner-card">
+          <h2>Grant credits / unlimited</h2>
+          <form id="grant-form" class="owner-form">
+            <label class="input-label" for="grant-email">User email</label>
+            <input id="grant-email" class="auth-input" type="email" required placeholder="user@email.com" />
+            <label class="input-label" for="grant-credits">Add credits</label>
+            <input id="grant-credits" class="auth-input" type="number" min="0" max="9999" value="10" />
+            <div class="owner-form-row">
+              <button type="submit" class="btn btn-primary">Add credits</button>
+              <button type="button" class="btn btn-ghost" id="grant-unlimited-btn">Grant unlimited</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="owner-card">
+          <h2>Waitlist &amp; users</h2>
+          <p class="settings-hint">Local storage only.</p>
+          <div id="waitlist-view" class="waitlist-view"></div>
+          <div class="owner-form-row" style="margin-top:0.75rem">
+            <button type="button" class="btn btn-ghost" id="reset-waitlist-btn">Clear waitlist</button>
+            <button type="button" class="btn btn-ghost danger-outline" id="clear-users-btn" title="Destructive — requires confirm">Clear all users…</button>
+          </div>
+        </section>
+
+        <section class="owner-card owner-card-wide">
+          <h2>Local bug / help reports <span class="dev-pill">local</span></h2>
+          <p class="settings-hint">These stay in this browser’s localStorage only. <strong>Real support comes via Gmail</strong> — users email <code>yuel.zeru2000@gmail.com</code> (subject: VOID Clips Support / Bug). Reply there.</p>
+          <div class="owner-form-row" style="margin-bottom:0.65rem">
+            <button type="button" class="btn btn-ghost" id="owner-bugs-refresh">Refresh</button>
+            <button type="button" class="btn btn-ghost" id="owner-bugs-clear">Clear local list</button>
+            <span id="owner-bugs-count" class="settings-hint" style="margin:0">—</span>
+          </div>
+          <div id="owner-bugs-list" class="owner-bugs-list"></div>
+        </section>
+
+        <section class="owner-card owner-card-wide">
+          <h2>Stats <span class="dev-pill">local</span></h2>
+          <div class="stats-grid" id="owner-stats">
+            <div class="stat-tile"><span class="stat-n" id="stat-signups">0</span><span class="stat-l">Signups</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-verified">0</span><span class="stat-l">Verified</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-gens">0</span><span class="stat-l">Gens (local)</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-waitlist">0</span><span class="stat-l">Waitlist</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-codes">0</span><span class="stat-l">Active codes</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-pro">0</span><span class="stat-l">Pro entitlements</span></div>
+            <div class="stat-tile"><span class="stat-n" id="stat-bugs">0</span><span class="stat-l">Local reports</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing / checkout modal (Stripe when configured · gift codes always) -->
+  <div id="pricing-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pricing-title">
+    <div class="modal-card modal-card-lg">
+      <p class="modal-eyebrow" id="pricing-eyebrow">Pro · EUR</p>
+      <h2 id="pricing-title">Go Pro</h2>
+      <p class="modal-sub" id="pricing-sub">Unlimited gens + download unlock. Primary: Swish (Sweden). Optional: card via Stripe. Or redeem an owner gift code.</p>
+
+      <div id="launch-promo-banner" class="launch-promo-banner" hidden role="status">
+        <strong>Launch price</strong> — cheaper than before.
+        <span class="launch-promo-note">Back to normal price after 1 month.</span>
+      </div>
+
+      <div class="pricing-plans" id="pricing-plans" role="radiogroup" aria-label="Plan">
+        <button type="button" class="plan-card active" data-plan="monthly" aria-pressed="true">
+          <span class="plan-name">Monthly</span>
+          <span class="plan-price-wrap">
+            <span class="plan-price-was" id="price-monthly-was" hidden></span>
+            <span class="plan-price" id="price-monthly-now">€9.99<span class="plan-per">/mo</span></span>
+          </span>
+          <span class="plan-desc">Unlimited gens · downloads · 30 days</span>
+        </button>
+        <button type="button" class="plan-card" data-plan="yearly" aria-pressed="false">
+          <span class="plan-name">Yearly <span class="plan-save" id="price-yearly-save">~2 mo free</span></span>
+          <span class="plan-price-wrap">
+            <span class="plan-price-was" id="price-yearly-was" hidden></span>
+            <span class="plan-price" id="price-yearly-now">€79<span class="plan-per">/yr</span></span>
+          </span>
+          <span class="plan-desc">Best value · 365 days Pro</span>
+        </button>
+      </div>
+
+      <p id="pricing-promo-ends" class="pricing-promo-ends" hidden></p>
+      <p id="payments-status" class="payments-status" hidden role="status"></p>
+
+      <div class="checkout-actions" id="checkout-actions-main">
+        <button type="button" class="btn btn-primary btn-lg btn-block btn-glow" id="swish-pay-btn">Pay with Swish</button>
+        <button type="button" class="btn btn-ghost btn-block" id="stripe-pay-btn" hidden>Pay with card</button>
+      </div>
+
+      <div id="swish-panel" class="swish-panel" hidden>
+        <p class="swish-panel-title">Betala med Swish · Pay with Swish</p>
+        <div class="swish-amount-row">
+          <span class="swish-label">Belopp / Amount</span>
+          <strong id="swish-amount-display">€4.99</strong>
+        </div>
+        <div class="swish-copy-row">
+          <div class="swish-copy-block">
+            <span class="swish-label">Swish-nummer / Number</span>
+            <code id="swish-number-display" class="swish-code">076-587 54 59</code>
+            <button type="button" class="btn btn-ghost btn-sm" id="swish-copy-number" title="Copy number">Copy</button>
+          </div>
+          <div class="swish-copy-block">
+            <span class="swish-label">Referens / Reference</span>
+            <code id="swish-ref-display" class="swish-code">VOID-····</code>
+            <button type="button" class="btn btn-ghost btn-sm" id="swish-copy-ref" title="Copy reference">Copy</button>
+          </div>
+        </div>
+        <ol class="swish-steps" id="swish-steps">
+          <li><strong>Öppna Swish</strong> · Open Swish</li>
+          <li><strong>Skicka beloppet</strong> till numret · Send the amount to the number</li>
+          <li><strong>Klistra in referensen</strong> i meddelandet · Paste the reference in the message</li>
+          <li>Tryck <strong>Jag har betalat</strong> · Tap I've paid</li>
+        </ol>
+        <button type="button" class="btn btn-primary btn-block" id="swish-mark-paid-btn">I've paid · Jag har betalat</button>
+        <p id="swish-waiting-msg" class="swish-waiting" hidden role="status">Waiting for owner to confirm — usually fast · Väntar på att ägaren bekräftar</p>
+        <button type="button" class="btn btn-ghost btn-block" id="swish-back-btn" style="margin-top:0.5rem">← Back to plans</button>
+      </div>
+
+      <div class="owner-code-block">
+        <label class="input-label" for="owner-code-input">Owner / gift code</label>
+        <div class="owner-code-row">
+          <input id="owner-code-input" class="auth-input" type="text" maxlength="32" placeholder="Redeem gift / Pro code" autocomplete="off" />
+          <button type="button" class="btn btn-ghost" id="redeem-code-btn">Redeem</button>
+        </div>
+        <p id="redeem-msg" class="auth-error" hidden role="alert"></p>
+      </div>
+
+      <button type="button" class="btn btn-ghost btn-block" id="pricing-close" style="margin-top:0.75rem">Close</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p>© 2026 VOID Clips · by <a href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer">Yuel · @V_O_I_.D</a></p>
+      <p><a href="index.html">← Home</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:yuel.zeru2000@gmail.com?subject=VOID%20Clips%20Support">Support</a> · Demo only</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

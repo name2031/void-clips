@@ -1,0 +1,18 @@
+{
+  "name": "void-clips",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VOID Clips — public demo + verify API (Resend, Swish)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

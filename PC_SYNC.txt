@@ -1,0 +1,11 @@
+Sync these to C:\Users\12tekyu1\AppData\Local\void-clips (machineId 13d3b9bf-5ad6-45b0-ac82-01f73cb80b9d):
+  app.html app.js index.html privacy.html style.css README.md DESCRIPTIONS.md
+  Start VOID Clips.bat
+  server/index.js server/.env server/.env.example server/package.json
+  assets/pfp.png
+Then restart: portable node server/index.js on 127.0.0.1:8787
+Also copy Start VOID Clips.bat to OneDrive Skrivbordet if needed.
+Swish primary: SWISH_NUMBER=+46765875459 (076-587 54 59). Owner confirms in Owner Panel.
+Optional: STRIPE_SECRET_KEY for Pay with card.
+Support: users email yuel.zeru2000@gmail.com · subject "VOID Clips Support" (or "VOID Clips Bug").
+Synced: 2026-09-20 (support/help mailto fix + Need help? CTA).
