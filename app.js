@@ -427,6 +427,8 @@
   var announceForm = document.getElementById("announce-form");
   var announceInput = document.getElementById("announce-input");
   var announceClearBtn = document.getElementById("announce-clear-btn");
+  var announceLivePreview = document.getElementById("announce-live-preview");
+  var announcePreviewText = document.getElementById("announce-preview-text");
   var flagBatchToggle = document.getElementById("flag-batch-toggle");
   var flagBatchStatus = document.getElementById("flag-batch-status");
   var flagLabsToggle = document.getElementById("flag-labs-toggle");
@@ -639,21 +641,44 @@
     return msg;
   }
 
+  function updateAnnounceLivePreview(msg) {
+    if (!announceLivePreview) return;
+    msg = String(msg || "").trim();
+    if (!msg) {
+      announceLivePreview.hidden = true;
+      if (announcePreviewText) announcePreviewText.textContent = "";
+      return;
+    }
+    if (announcePreviewText) announcePreviewText.textContent = msg;
+    announceLivePreview.hidden = false;
+  }
+
   function applyAnnounceBanner() {
     if (!announceBanner) return;
     var msg = getAnnounceMessage();
     if (!msg) {
       announceBanner.hidden = true;
+      if (announceInput && isOwner()) {
+        announceInput.value = "";
+        updateAnnounceLivePreview("");
+      }
       return;
     }
     try {
       if (localStorage.getItem(ANNOUNCE_DISMISS_KEY) === msg) {
         announceBanner.hidden = true;
+        if (announceInput && isOwner()) {
+          announceInput.value = msg;
+          updateAnnounceLivePreview(msg);
+        }
         return;
       }
     } catch (e) {}
     if (announceBannerText) announceBannerText.textContent = msg;
-    if (announceInput && isOwner()) announceInput.value = msg;
+    if (announceInput && isOwner()) {
+      announceInput.value = msg;
+      updateAnnounceLivePreview(msg);
+    }
     announceBanner.hidden = false;
   }
 
@@ -3099,7 +3124,10 @@
     renderOwnerBugReports();
     refreshOwnerStats();
     loadSwishPending();
-    if (announceInput) announceInput.value = getAnnounceMessage();
+    if (announceInput) {
+      announceInput.value = getAnnounceMessage();
+      updateAnnounceLivePreview(announceInput.value);
+    }
   }
 
   function closeOwnerPanel() {
@@ -3770,6 +3798,7 @@
       if (!isOwner()) return;
       var msg = setAnnounceMessage(announceInput && announceInput.value);
       pushSiteConfig({ announce: msg });
+      updateAnnounceLivePreview(msg);
       showToast(msg ? "Announce set" : "Announce cleared");
     });
   }
@@ -3778,8 +3807,14 @@
       if (!isOwner()) return;
       setAnnounceMessage("");
       if (announceInput) announceInput.value = "";
+      updateAnnounceLivePreview("");
       pushSiteConfig({ announce: "" });
       showToast("Announce cleared");
+    });
+  }
+  if (announceInput) {
+    announceInput.addEventListener("input", function () {
+      updateAnnounceLivePreview(announceInput.value);
     });
   }
   if (announceBannerDismiss) {

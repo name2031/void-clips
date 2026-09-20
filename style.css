@@ -2881,24 +2881,167 @@ body:not(.is-owner) .owner-only {
 .nav-owner-badge { display: flex; align-items: center; }
 .nav-pro-badge { display: flex; align-items: center; }
 
+/* —— Owner announce banner (creator identity + glass) —— */
 .announce-banner {
   position: relative;
   z-index: 40;
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.22), rgba(167, 139, 250, 0.12));
-  border-bottom: 1px solid rgba(167, 139, 250, 0.35);
-  padding: 0.55rem 0;
+  overflow: hidden;
+  padding: 0.7rem 0;
+  background:
+    linear-gradient(120deg, rgba(109, 40, 217, 0.38) 0%, rgba(24, 16, 40, 0.82) 42%, rgba(76, 29, 149, 0.28) 100%),
+    radial-gradient(ellipse 80% 120% at 8% 50%, rgba(167, 139, 250, 0.22), transparent 55%);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+}
+.announce-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--violet-bright), var(--violet-neon), transparent);
+  opacity: 0.9;
+  pointer-events: none;
 }
 .announce-banner[hidden] { display: none !important; }
 .announce-banner-inner {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.85rem 1.1rem;
+}
+.announce-banner-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+.announce-banner-pfp-wrap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(145deg, var(--violet-bright), var(--violet-neon), var(--violet-deep));
+  box-shadow:
+    0 0 0 1px rgba(196, 181, 253, 0.35),
+    0 0 18px var(--violet-glow),
+    0 0 32px rgba(139, 92, 246, 0.22);
+}
+.announce-banner-pfp {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0a0a0e;
+}
+.announce-banner-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.announce-banner-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  line-height: 1.2;
+}
+.announce-banner-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #f5f3ff;
+  text-shadow: 0 0 18px rgba(196, 181, 253, 0.35);
+}
+.announce-banner-handle {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(196, 181, 253, 0.72);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a.announce-banner-handle:hover {
+  color: var(--violet-bright);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.announce-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--violet-bright);
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  line-height: 1.2;
 }
 .announce-banner-text {
-  font-size: 0.82rem;
+  margin: 0;
+  font-size: 0.84rem;
   color: #e9d5ff;
-  line-height: 1.4;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.announce-banner-dismiss {
+  align-self: center;
+}
+.announce-banner--preview {
+  z-index: auto;
+  margin-top: 0;
+  border-radius: var(--radius);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 0.65rem 0.75rem;
+}
+.announce-banner--preview .announce-banner-inner {
+  gap: 0;
+}
+.announce-banner--preview::before {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.announce-live-preview {
+  margin: 0.75rem 0 0.15rem;
+}
+.announce-live-preview[hidden] { display: none !important; }
+.announce-live-preview-label {
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+@media (max-width: 720px) {
+  .announce-banner {
+    padding: 0.65rem 0;
+  }
+  .announce-banner-inner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .announce-banner-pfp-wrap {
+    width: 40px;
+    height: 40px;
+  }
+  .announce-banner-name { font-size: 0.84rem; }
+  .announce-banner-text { font-size: 0.8rem; }
+  .announce-banner-dismiss {
+    margin-left: auto;
+  }
 }
 .owner-lookup-result {
   margin-top: 0.75rem;

@@ -48,8 +48,20 @@
   <!-- Owner announce (site-wide message) -->
   <div id="announce-banner" class="announce-banner" hidden role="status">
     <div class="container announce-banner-inner">
-      <span id="announce-banner-text" class="announce-banner-text"></span>
-      <button type="button" id="announce-banner-dismiss" class="beta-banner-dismiss" aria-label="Dismiss announcement">Dismiss</button>
+      <div class="announce-banner-main">
+        <div class="announce-banner-pfp-wrap" aria-hidden="true">
+          <img class="announce-banner-pfp" src="assets/pfp.png" alt="" width="44" height="44" decoding="async" />
+        </div>
+        <div class="announce-banner-body">
+          <div class="announce-banner-who">
+            <span class="announce-banner-name">Yuel</span>
+            <a class="announce-banner-handle" href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer">@V_O_I_.D</a>
+            <span class="announce-banner-chip">From VOID</span>
+          </div>
+          <p id="announce-banner-text" class="announce-banner-text"></p>
+        </div>
+      </div>
+      <button type="button" id="announce-banner-dismiss" class="beta-banner-dismiss announce-banner-dismiss" aria-label="Dismiss announcement">Dismiss</button>
     </div>
   </div>
 
@@ -675,6 +687,26 @@
           <form id="announce-form" class="owner-form">
             <label class="input-label" for="announce-input">Message</label>
             <input id="announce-input" class="auth-input" type="text" maxlength="280" placeholder="e.g. Swish Pro unlocks within minutes today" autocomplete="off" />
+            <div id="announce-live-preview" class="announce-live-preview" hidden aria-live="polite">
+              <div class="announce-live-preview-label">Live preview</div>
+              <div class="announce-banner announce-banner--preview">
+                <div class="announce-banner-inner">
+                  <div class="announce-banner-main">
+                    <div class="announce-banner-pfp-wrap" aria-hidden="true">
+                      <img class="announce-banner-pfp" src="assets/pfp.png" alt="" width="44" height="44" decoding="async" />
+                    </div>
+                    <div class="announce-banner-body">
+                      <div class="announce-banner-who">
+                        <span class="announce-banner-name">Yuel</span>
+                        <span class="announce-banner-handle">@V_O_I_.D</span>
+                        <span class="announce-banner-chip">From VOID</span>
+                      </div>
+                      <p id="announce-preview-text" class="announce-banner-text"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="owner-form-row">
               <button type="submit" class="btn btn-primary">Set announce</button>
               <button type="button" class="btn btn-ghost" id="announce-clear-btn">Clear</button>
