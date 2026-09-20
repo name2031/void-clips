@@ -2969,7 +2969,7 @@
 
 
   /* —— toast —— */
-  function showToast(msg) {
+  function showToast(msg, durationMs) {
     if (!toastEl) return;
     toastEl.hidden = false;
     toastEl.textContent = msg;
@@ -2982,7 +2982,7 @@
       setTimeout(function () {
         toastEl.hidden = true;
       }, 280);
-    }, 2200);
+    }, typeof durationMs === "number" ? durationMs : 2200);
   }
 
   /* —— beta banner —— */
@@ -4772,7 +4772,7 @@
     );
   }
 
-  function downloadClipPack(clip, index) {
+  function downloadCaptionPack(clip, index) {
     if (!canUsePro()) {
       promptProUpgrade("Download / export");
       return;
@@ -4803,15 +4803,451 @@
       hashtagPack() +
       "\n";
     var blob = new Blob([body], { type: "text/plain;charset=utf-8" });
+    triggerBlobDownload(blob, "void-clip-" + (index + 1) + "-" + (state.style || "viral") + ".txt");
+  }
+
+  function triggerBlobDownload(blob, filename) {
+    if (!blob) return;
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "void-clip-" + (index + 1) + "-" + (state.style || "viral") + ".txt";
+    a.download = filename || "void-clip.bin";
     document.body.appendChild(a);
     a.click();
     setTimeout(function () {
       URL.revokeObjectURL(a.href);
       a.remove();
-    }, 500);
+    }, 800);
+  }
+
+  var CLIP_GRAD_COLORS = {
+    "grad-viral-1": ["#6d28d9", "#312e81", "#0f172a"],
+    "grad-viral-2": ["#a855f7", "#4c1d95", "#18181b"],
+    "grad-viral-3": ["#7c3aed", "#581c87", "#0c0a1a"],
+    "grad-viral-4": ["#8b5cf6", "#1e1035", "#050506"],
+    "grad-story-1": ["#1e3a8a", "#0f172a", "#020617"],
+    "grad-story-2": ["#1d4ed8", "#1e1b4b", "#020617"],
+    "grad-story-3": ["#2563eb", "#312e81", "#0a0a0f"],
+    "grad-story-4": ["#0ea5e9", "#1e3a8a", "#020617"],
+    "grad-funny-1": ["#db2777", "#7c2d12", "#18181b"],
+    "grad-funny-2": ["#f472b6", "#9d174d", "#1c1917"],
+    "grad-funny-3": ["#f59e0b", "#be185d", "#0c0a09"],
+    "grad-funny-4": ["#ec4899", "#4c1d95", "#09090b"],
+    "grad-1": ["#6d28d9", "#312e81", "#0f172a"],
+    "grad-2": ["#a855f7", "#4c1d95", "#18181b"],
+    "grad-3": ["#7c3aed", "#581c87", "#0c0a1a"],
+    "grad-4": ["#8b5cf6", "#1e1035", "#050506"]
+  };
+
+  function pickMediaRecorderMime() {
+    if (typeof MediaRecorder === "undefined") return null;
+    var candidates = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8",
+      "video/webm",
+      "video/mp4;codecs=h264",
+      "video/mp4"
+    ];
+    /* Prefer WebM (Chrome/Firefox); MP4 when that's what the browser records */
+    var i;
+    for (i = 0; i < candidates.length; i++) {
+      try {
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])) {
+          return candidates[i];
+        }
+      } catch (e) {}
+    }
+    return "";
+  }
+
+  function mediaExtFromMime(mime) {
+    if (mime && /mp4/i.test(mime)) return "mp4";
+    return "webm";
+  }
+
+  function loadThumbImageForCanvas(url) {
+    return new Promise(function (resolve) {
+      if (!url) {
+        resolve(null);
+        return;
+      }
+      var img = new Image();
+      var settled = false;
+      function done(val) {
+        if (settled) return;
+        settled = true;
+        resolve(val);
+      }
+      img.crossOrigin = "anonymous";
+      img.onload = function () {
+        done(img);
+      };
+      img.onerror = function () {
+        /* CORS or network — render without photo rather than taint canvas */
+        done(null);
+      };
+      img.src = url;
+      setTimeout(function () {
+        done(null);
+      }, 6000);
+    });
+  }
+
+  function drawCoverImage(ctx, img, w, h, scale, panX, panY) {
+    var iw = img.naturalWidth || img.width;
+    var ih = img.naturalHeight || img.height;
+    if (!iw || !ih) return;
+    var s = Math.max(w / iw, h / ih) * (scale || 1);
+    var dw = iw * s;
+    var dh = ih * s;
+    var dx = (w - dw) / 2 + (panX || 0) * Math.max(0, (dw - w) / 2);
+    var dy = (h - dh) / 2 + (panY || 0) * Math.max(0, (dh - h) / 2);
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  function wrapCanvasCentered(ctx, text, cx, y, maxWidth, lineHeight, maxLines) {
+    var words = String(text || "").split(/\s+/).filter(Boolean);
+    if (!words.length) return y;
+    var lines = [];
+    var line = "";
+    var n;
+    for (n = 0; n < words.length; n++) {
+      var test = line ? line + " " + words[n] : words[n];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = words[n];
+        if (lines.length >= (maxLines || 4) - 1) {
+          var rest = words.slice(n).join(" ");
+          if (ctx.measureText(rest).width > maxWidth) {
+            while (rest.length > 1 && ctx.measureText(rest + "…").width > maxWidth) {
+              rest = rest.slice(0, -1);
+            }
+            rest = rest + "…";
+          }
+          lines.push(rest);
+          line = "";
+          break;
+        }
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    ctx.textAlign = "center";
+    for (n = 0; n < lines.length; n++) {
+      ctx.fillText(lines[n], cx, y + n * lineHeight);
+    }
+    ctx.textAlign = "start";
+    return y + lines.length * lineHeight;
+  }
+
+  function drawClipVideoFrame(ctx, clip, opts) {
+    var w = opts.width;
+    var h = opts.height;
+    var t = opts.t; /* 0..1 */
+    var img = opts.img;
+    var colors = CLIP_GRAD_COLORS[clip.grad] || CLIP_GRAD_COLORS["grad-viral-1"];
+    var grd = ctx.createLinearGradient(0, 0, w * 0.2, h);
+    grd.addColorStop(0, colors[0]);
+    grd.addColorStop(0.42, colors[1]);
+    grd.addColorStop(1, colors[2]);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, w, h);
+
+    if (img) {
+      var scale = 1.08 + t * 0.12;
+      var panX = Math.sin(t * Math.PI * 2) * 0.35;
+      var panY = (t - 0.5) * 0.55;
+      drawCoverImage(ctx, img, w, h, scale, panX, panY);
+      /* Darken for caption readability */
+      ctx.fillStyle = "rgba(0,0,0," + (0.28 + t * 0.08) + ")";
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    /* Soft vignette */
+    var vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.15, w / 2, h / 2, h * 0.72);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(0,0,0,0.45)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+
+    /* Top / bottom safe gradients */
+    var topG = ctx.createLinearGradient(0, 0, 0, h * 0.22);
+    topG.addColorStop(0, "rgba(0,0,0,0.55)");
+    topG.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = topG;
+    ctx.fillRect(0, 0, w, h * 0.22);
+    var botG = ctx.createLinearGradient(0, h * 0.62, 0, h);
+    botG.addColorStop(0, "rgba(0,0,0,0)");
+    botG.addColorStop(1, "rgba(0,0,0,0.72)");
+    ctx.fillStyle = botG;
+    ctx.fillRect(0, h * 0.62, w, h * 0.38);
+
+    /* Platform + score chips */
+    var platform = opts.platform || "Shorts";
+    var score = typeof clip.score === "number" ? clip.score : 75;
+    ctx.font = "700 22px Space Grotesk, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText(platform, 36, 52);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#c4b5fd";
+    ctx.fillText(String(score), w - 36, 52);
+    ctx.textAlign = "start";
+
+    /* Burn-in hook / caption */
+    var burn = burnInText(clip) || overlayCaption(clip) || clip.hook || "";
+    if (burn) {
+      ctx.save();
+      var pulse = 0.92 + Math.sin(t * Math.PI * 4) * 0.04;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "800 44px Space Grotesk, system-ui, sans-serif";
+      ctx.shadowColor = "rgba(0,0,0,0.85)";
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 3;
+      wrapCanvasCentered(ctx, burn, w / 2, h * 0.58, w - 80, 52, 4);
+      ctx.restore();
+    }
+
+    /* Duration + beat */
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.font = "600 20px Space Grotesk, system-ui, sans-serif";
+    if (clip.duration) ctx.fillText(clip.duration, 36, h - 78);
+    if (clip.beat) {
+      ctx.fillStyle = "rgba(196,181,253,0.85)";
+      ctx.font = "500 18px Space Grotesk, system-ui, sans-serif";
+      ctx.fillText(clip.beat, 36, h - 50);
+    }
+
+    /* Progress bar scrub */
+    var barX = 36;
+    var barW = w - 72;
+    var barY = h - 28;
+    var barH = 6;
+    ctx.fillStyle = "rgba(255,255,255,0.22)";
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = "#a78bfa";
+    ctx.fillRect(barX, barY, barW * Math.min(1, Math.max(0, t)), barH);
+
+    /* Brand */
+    ctx.fillStyle = "rgba(196,181,253,0.55)";
+    ctx.font = "700 16px Space Grotesk, system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText("VOID Clips", w - 36, h - 50);
+    ctx.textAlign = "start";
+  }
+
+  function exportClipStillPng(clip, index, img, platform) {
+    var canvas = document.createElement("canvas");
+    canvas.width = 720;
+    canvas.height = 1280;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      showToast("Canvas unavailable");
+      return;
+    }
+    drawClipVideoFrame(ctx, clip, {
+      width: 720,
+      height: 1280,
+      t: 0.45,
+      img: img || null,
+      platform: platform
+    });
+    canvas.toBlob(function (blob) {
+      if (!blob) {
+        showToast("Could not export still frame");
+        exportShareCard(clip, index);
+        return;
+      }
+      triggerBlobDownload(blob, "void-clip-" + (index + 1) + "-" + (state.style || "viral") + ".png");
+      showToast("Still frame PNG saved (video unsupported)");
+    }, "image/png");
+  }
+
+  function downloadClipVideo(clip, index, btn) {
+    if (!canUsePro()) {
+      promptProUpgrade("Download / export");
+      return;
+    }
+    if (btn && btn.getAttribute("data-rendering") === "1") return;
+
+    var sourceUrl =
+      (btn && btn.closest && btn.closest(".clip-card") && btn.closest(".clip-card").getAttribute("data-source-url")) ||
+      lastSourceUrl ||
+      "";
+    var platform = platformFromUrl(sourceUrl) || "Shorts";
+    var thumbUrl = resolveSourceThumb(sourceUrl);
+    var mime = pickMediaRecorderMime();
+    var canRecord =
+      typeof MediaRecorder !== "undefined" &&
+      typeof HTMLCanvasElement !== "undefined" &&
+      HTMLCanvasElement.prototype.captureStream;
+
+    function unlockBtn() {
+      if (!btn) return;
+      btn.removeAttribute("data-rendering");
+      btn.disabled = false;
+      btn.classList.remove("is-rendering");
+    }
+
+    function lockBtn() {
+      if (!btn) return;
+      btn.setAttribute("data-rendering", "1");
+      btn.disabled = true;
+      btn.classList.add("is-rendering");
+    }
+
+    lockBtn();
+    showToast("Rendering…", 7000);
+
+    loadThumbImageForCanvas(thumbUrl).then(function (img) {
+      if (!canRecord || mime === null) {
+        showToast("Video download unsupported here — saving still frame");
+        exportClipStillPng(clip, index, img, platform);
+        unlockBtn();
+        return;
+      }
+
+      var W = 720;
+      var H = 1280;
+      var durationMs = 4500;
+      var fps = 30;
+      var canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      var ctx = canvas.getContext("2d");
+      if (!ctx) {
+        showToast("Canvas unavailable — saving still frame");
+        exportClipStillPng(clip, index, img, platform);
+        unlockBtn();
+        return;
+      }
+
+      var stream;
+      try {
+        stream = canvas.captureStream(fps);
+      } catch (err) {
+        showToast("Capture unsupported — saving still frame");
+        exportClipStillPng(clip, index, img, platform);
+        unlockBtn();
+        return;
+      }
+
+      var recorderOpts = { videoBitsPerSecond: 2800000 };
+      if (mime) recorderOpts.mimeType = mime;
+      var recorder;
+      try {
+        recorder = new MediaRecorder(stream, recorderOpts);
+      } catch (err2) {
+        try {
+          recorder = new MediaRecorder(stream);
+        } catch (err3) {
+          showToast("Recorder failed — saving still frame");
+          stream.getTracks().forEach(function (tr) {
+            tr.stop();
+          });
+          exportClipStillPng(clip, index, img, platform);
+          unlockBtn();
+          return;
+        }
+      }
+
+      var chunks = [];
+      var finished = false;
+      var usedMime = recorder.mimeType || mime || "video/webm";
+      var ext = mediaExtFromMime(usedMime);
+      var filename = "void-clip-" + (index + 1) + "-" + (state.style || "viral") + "." + ext;
+
+      function cleanupStream() {
+        try {
+          stream.getTracks().forEach(function (tr) {
+            tr.stop();
+          });
+        } catch (e) {}
+      }
+
+      function failToStill(msg) {
+        if (finished) return;
+        finished = true;
+        cleanupStream();
+        showToast(msg || "Render failed — saving still frame");
+        exportClipStillPng(clip, index, img, platform);
+        unlockBtn();
+      }
+
+      recorder.ondataavailable = function (ev) {
+        if (ev.data && ev.data.size) chunks.push(ev.data);
+      };
+
+      recorder.onerror = function () {
+        failToStill("Recorder error — saving still frame");
+      };
+
+      recorder.onstop = function () {
+        if (finished) return;
+        finished = true;
+        cleanupStream();
+        if (!chunks.length) {
+          showToast("Empty recording — saving still frame");
+          exportClipStillPng(clip, index, img, platform);
+          unlockBtn();
+          return;
+        }
+        var blob = new Blob(chunks, { type: usedMime.split(";")[0] || "video/webm" });
+        triggerBlobDownload(blob, filename);
+        showToast(isOwner() ? "Owner clip downloaded" : "Clip downloaded");
+        unlockBtn();
+        markOnboardStep("copy");
+      };
+
+      try {
+        recorder.start(100);
+      } catch (startErr) {
+        failToStill("Could not start recorder — saving still frame");
+        return;
+      }
+
+      var start = performance.now();
+      function tick(now) {
+        var elapsed = now - start;
+        var t = Math.min(1, elapsed / durationMs);
+        drawClipVideoFrame(ctx, clip, {
+          width: W,
+          height: H,
+          t: t,
+          img: img,
+          platform: platform
+        });
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          try {
+            if (recorder.state !== "inactive") recorder.stop();
+          } catch (stopErr) {
+            failToStill("Stop failed — saving still frame");
+          }
+        }
+      }
+      /* Prime first frame before RAF so the file isn't blank at t=0 */
+      drawClipVideoFrame(ctx, clip, { width: W, height: H, t: 0, img: img, platform: platform });
+      requestAnimationFrame(tick);
+
+      /* Safety timeout if onstop never fires */
+      setTimeout(function () {
+        if (finished) return;
+        try {
+          if (recorder.state !== "inactive") recorder.stop();
+        } catch (e) {
+          failToStill("Render timed out — saving still frame");
+        }
+      }, durationMs + 4000);
+    });
+  }
+
+  /* Back-compat alias */
+  function downloadClipPack(clip, index) {
+    downloadClipVideo(clip, index, null);
   }
 
   function renderClips(sourceLabel) {
@@ -6646,7 +7082,7 @@
           ? '<button type="button" class="btn btn-ghost btn-sm share-card-btn" title="PNG share card">Share card <span class="pro-glow-badge">Pro</span></button>'
           : '<button type="button" class="btn btn-ghost btn-sm share-card-btn is-pro-locked" title="Share card · Pro exclusive">🔒 Share card</button>') +
         (canUsePro()
-          ? '<button type="button" class="btn btn-primary btn-sm download-pro btn-pro-glow" title="Download caption pack">Download <span class="pro-glow-badge">Pro</span></button>'
+          ? '<button type="button" class="btn btn-primary btn-sm download-pro btn-pro-glow" title="Download clip video (WebM/MP4)">Download <span class="pro-glow-badge">Pro</span></button>'
           : '<button type="button" class="btn btn-primary btn-sm btn-pro download-locked" title="Pro unlocks downloads">🔒 Download</button>') +
         "</div>" +
         "</div>";
@@ -6682,9 +7118,7 @@
       var dlBtn = card.querySelector(".download-pro");
       if (dlBtn) {
         dlBtn.addEventListener("click", function () {
-          downloadClipPack(clip, index);
-          showToast(isOwner() ? "Owner pack downloaded" : "Pro pack downloaded");
-          markOnboardStep("copy");
+          downloadClipVideo(clip, index, dlBtn);
         });
       }
       var dlLocked = card.querySelector(".download-locked");

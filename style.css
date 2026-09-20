@@ -4684,6 +4684,12 @@ button.is-pro-locked,
 .btn-pro-glow {
   box-shadow: 0 0 18px rgba(139, 92, 246, 0.35);
 }
+.download-pro.is-rendering,
+.download-pro:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  pointer-events: none;
+}
 body.is-pro-user .clip-card {
   box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.08);
 }
