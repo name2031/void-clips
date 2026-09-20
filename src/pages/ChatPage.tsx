@@ -6,10 +6,8 @@ import MessageBubble, { Msg } from '../components/MessageBubble';
 const CHIPS = [
   { label: 'Build', prompt: 'Help me build ', hint: 'Ship something concrete' },
   { label: 'Analyze', prompt: 'Analyze this: ', hint: 'Cut through noise' },
-  { label: 'Create', prompt: 'Create ', hint: 'Make from nothing' },
-  { label: 'Research', prompt: 'Research ', hint: 'Map the terrain' },
-  { label: 'Write', prompt: 'Write ', hint: 'Words that land' },
   { label: 'Code', prompt: 'Write code for ', hint: 'Implementation-ready' },
+  { label: 'Write', prompt: 'Write ', hint: 'Words that land' },
   { label: 'Plan', prompt: 'Make a plan for ', hint: 'Sequence the work' },
 ];
 
@@ -166,7 +164,6 @@ export default function ChatPage() {
         ac.signal
       );
 
-      // If stream ended with no tokens and no error event, mark as error
       if (!acc.trim() && !hadError) {
         const msg = 'VOID AI returned an empty reply. Tap Retry to try again.';
         setMessages((m) =>
@@ -269,8 +266,6 @@ export default function ChatPage() {
         <div className="chat-inner">
           {!messages.length && (
             <div className="empty-chat">
-              <div className="empty-orb" aria-hidden />
-              <p className="empty-kicker">Workspace</p>
               <h2>What should VOID handle?</h2>
               <p className="empty-sub">Tell it what you need. Let it handle the rest.</p>
               <div className="chips">
@@ -332,7 +327,7 @@ export default function ChatPage() {
           <textarea
             ref={taRef}
             rows={1}
-            placeholder="Tell VOID what you want to do…"
+            placeholder="Message VOID…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

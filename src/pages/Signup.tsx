@@ -28,14 +28,12 @@ export default function Signup() {
 
   return (
     <div className="auth-page">
-      <div className="landing-orb landing-orb-b" aria-hidden />
-      <div className="landing-noise" aria-hidden />
       <form className="auth-card" onSubmit={onSubmit}>
-        <Link to="/" className="logo logo-mark" style={{ marginBottom: '1.5rem', display: 'inline-block' }}>
+        <Link to="/" className="logo logo-mark auth-logo">
           VOID <span>AI</span>
         </Link>
         <h1>Create account</h1>
-        <p className="sub">Tell it what you need. Let it handle the rest.</p>
+        <p className="sub">Get a workspace. Start with a clear ask.</p>
         {error && <div className="auth-error">{error}</div>}
         <div className="field">
           <label htmlFor="signup-email">Email</label>
@@ -59,10 +57,10 @@ export default function Signup() {
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
             required
-            placeholder="••••••••"
+            placeholder="Password"
           />
         </div>
-        <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
+        <button className="btn btn-primary btn-block" disabled={busy}>
           {busy ? (
             <>
               <span className="spinner" /> Creating…

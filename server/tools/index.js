@@ -38,10 +38,22 @@ export async function runTool(name, args = {}, ctx = {}) {
 export function detectToolHints(userText) {
   const text = (userText || '').toLowerCase();
   const hints = [];
-  if (/\b(search|look up|browse|web|google)\b/.test(text)) hints.push('web_stub');
-  if (/\b(calc|calculate|compute|\d+\s*[\+\-\*\/]\s*\d+)/.test(text)) hints.push('calculator');
-  if (/\b(code|refactor|debug|function|typescript|javascript|python)\b/.test(text)) hints.push('code_assist');
-  if (/\b(summariz|summary|summarise)\b/.test(text)) hints.push('file_summary');
+  if (/\b(search|look up|browse|web|google|online)\b/.test(text)) hints.push('web_stub');
+  if (
+    /\b(calc|calculate|compute|evaluate|what(?:'s| is)\s+\d|how much is)\b/.test(text) ||
+    /\d+\s*[\+\-\*\/×÷%]\s*\d+/.test(text) ||
+    /\(\s*\d+[\d\s+\-*/().%]*\)/.test(text)
+  ) {
+    hints.push('calculator');
+  }
+  if (
+    /\b(code|coding|refactor|debug|implement|function|typescript|javascript|python|rust|go\b|java\b|sql|css|html|api|bug|compile|unit test|write a script)\b/.test(
+      text
+    )
+  ) {
+    hints.push('code_assist');
+  }
+  if (/\b(summariz|summary|summarise|key points|tl;?dr)\b/.test(text)) hints.push('file_summary');
   return hints;
 }
 

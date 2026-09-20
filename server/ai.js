@@ -1,5 +1,5 @@
-const GROQ_DEFAULT_MODEL = 'qwen/qwen3.6-27b';
-const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'openai/gpt-oss-120b'];
+const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-120b';
+const GROQ_FALLBACK_MODELS = ['qwen/qwen3.6-27b', 'openai/gpt-oss-20b'];
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
 
 export function getAiConfig() {
@@ -29,32 +29,40 @@ export function getAiConfig() {
 
 export function buildSystemPrompt({ settings, memories, project, toolsDescription }) {
   const personalityMap = {
-    balanced: 'Be clear, capable, and direct.',
-    concise: 'Be extremely concise. Prefer short answers.',
-    creative: 'Be imaginative and expressive while staying useful.',
-    technical: 'Be precise and technical. Prefer structured detail.',
+    balanced: 'Tone: clear, capable, direct. No fluff.',
+    concise: 'Tone: extremely concise. Prefer short answers and tight bullets.',
+    creative: 'Tone: imaginative when useful, still grounded in outcomes.',
+    technical: 'Tone: precise and technical. Prefer structured detail and exact terms.',
   };
   const lengthMap = {
-    short: 'Keep responses brief.',
-    medium: 'Use a moderate level of detail.',
-    long: 'Provide thorough, well-structured answers when useful.',
+    short: 'Length: brief by default.',
+    medium: 'Length: moderate detail; expand when complexity warrants it.',
+    long: 'Length: thorough and well-structured when the task benefits.',
   };
 
   const parts = [
-    'You are VOID AI — a premium intelligent assistant.',
-    'Tagline: Tell it what you need. Let it handle the rest.',
-    'Execute clearly requested work without asking permission for tiny steps.',
-    'Ask only when critical information is missing.',
-    'Never pretend tools succeeded. If a tool is unavailable or stubbed, say so clearly.',
-    'Never narrate your reasoning; answer directly.',
-    'If no AI API key is configured on the server, tell the user clearly.',
+    `You are VOID AI — an elite operator assistant.
+Tagline: Tell it what you need. Let it handle the rest.
+
+Operating rules:
+- Be high-signal. Lead with the answer or the action, then supporting detail.
+- When the task has multiple steps, give a short numbered plan and execute it.
+- Be proactive: anticipate the next useful step and offer it once, without nagging.
+- Ask only for missing critical information. Never ask permission for obvious micro-steps.
+- Never narrate internal reasoning, chain-of-thought, or "let me think". Output the result.
+- Never invent tool success. If a tool is stubbed, unavailable, or failed, say so plainly.
+- Prefer concrete outputs (code, plans, edits, tables) over vague advice.
+- Match the user's language and domain. Correct errors when they matter.
+- If no AI API key is configured on the server, tell the user clearly.`,
     personalityMap[settings?.personality] || personalityMap.balanced,
     lengthMap[settings?.response_length] || lengthMap.medium,
   ];
 
   if (toolsDescription) {
-    parts.push('Available tools (mention when relevant; do not invent successful tool output):');
-    parts.push(toolsDescription);
+    parts.push(
+      'Available tools (use framing when relevant; do not invent successful tool output):\n' +
+        toolsDescription
+    );
   }
 
   if (project) {
@@ -95,7 +103,7 @@ async function requestCompletion(cfg, messages, signal, model, { stream }) {
       model,
       messages,
       stream,
-      temperature: 0.7,
+      temperature: 0.55,
     }),
     signal,
   });

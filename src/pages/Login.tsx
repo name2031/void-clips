@@ -28,14 +28,12 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="landing-orb landing-orb-a" aria-hidden />
-      <div className="landing-noise" aria-hidden />
       <form className="auth-card" onSubmit={onSubmit}>
-        <Link to="/" className="logo logo-mark" style={{ marginBottom: '1.5rem', display: 'inline-block' }}>
+        <Link to="/" className="logo logo-mark auth-logo">
           VOID <span>AI</span>
         </Link>
         <h1>Welcome back</h1>
-        <p className="sub">Return to your workspace. Pick up where the signal left off.</p>
+        <p className="sub">Sign in to your workspace.</p>
         {error && <div className="auth-error">{error}</div>}
         <div className="field">
           <label htmlFor="login-email">Email</label>
@@ -58,10 +56,10 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            placeholder="••••••••"
+            placeholder="Password"
           />
         </div>
-        <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
+        <button className="btn btn-primary btn-block" disabled={busy}>
           {busy ? (
             <>
               <span className="spinner" /> Signing in…

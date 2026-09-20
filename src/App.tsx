@@ -19,13 +19,10 @@ function Protected({ children }: { children: React.ReactNode }) {
           height: '100%',
           alignItems: 'center',
           justifyContent: 'center',
-          flexDirection: 'column',
-          gap: '1rem',
           background: 'var(--bg)',
         }}
       >
-        <div className="empty-orb" style={{ width: 48, height: 48, margin: 0 }} aria-hidden />
-        <div className="spinner" />
+        <div className="spinner" aria-label="Loading" />
       </div>
     );
   }

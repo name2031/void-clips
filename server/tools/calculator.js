@@ -1,6 +1,7 @@
 export const calculator = {
   name: 'calculator',
-  description: 'Evaluate basic arithmetic expressions safely.',
+  description:
+    'Exact arithmetic for expressions with + - * / % and parentheses. Prefer this over mental math when the user asks to calculate, compute, or evaluate a numeric expression.',
   available: true,
   async execute({ expression } = {}) {
     if (!expression || typeof expression !== 'string') {
