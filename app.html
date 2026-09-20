@@ -263,7 +263,7 @@
     <div class="app-header">
       <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
       <h1>Generate clips</h1>
-      <p>Paste a link. Pick a style. Demo returns sample clips — not real AI.</p>
+      <p>Paste a link. Pick a style. Get punchy hooks, Shorts-style previews &amp; VOID Resonance — demo cards, not live AI.</p>
     </div>
 
     <div class="input-card">
@@ -287,10 +287,11 @@
         <div class="control-group">
           <span class="input-label">Style</span>
           <div class="segmented" id="style-presets" role="group" aria-label="Clip style">
-            <button type="button" class="seg-btn active" data-style="viral">Viral Hook</button>
-            <button type="button" class="seg-btn" data-style="story">Story</button>
-            <button type="button" class="seg-btn" data-style="funny">Funny</button>
+            <button type="button" class="seg-btn active" data-style="viral" title="Cold opens, curiosity gaps, save bait">Viral Hook</button>
+            <button type="button" class="seg-btn" data-style="story" title="Cold open → escalate → reveal → payoff">Story</button>
+            <button type="button" class="seg-btn" data-style="funny" title="Reaction punches, chaos cuts, fail edits">Funny</button>
           </div>
+          <p class="style-hint" id="style-hint">Viral · interrupt + delayed payoff</p>
         </div>
         <div class="control-group">
           <span class="input-label">Titles</span>
@@ -366,13 +367,13 @@
 
     <div id="loading" class="loading-panel" aria-live="polite">
       <div class="spinner" role="status" aria-label="Loading"></div>
-      <p class="loading-title">Working on your clips…</p>
+      <p class="loading-title">Crafting premium cuts…</p>
       <ol class="progress-steps" id="progress-steps">
         <li data-step="0" class="prog-step">Fetch</li>
-        <li data-step="1" class="prog-step">Find hooks</li>
-        <li data-step="2" class="prog-step">Cut clips</li>
+        <li data-step="1" class="prog-step">Score hooks</li>
+        <li data-step="2" class="prog-step">Frame clips</li>
       </ol>
-      <p id="loading-status" class="loading-status">Fetching video…</p>
+      <p id="loading-status" class="loading-status">Pulling source frames…</p>
     </div>
 
     <div id="empty-state" class="state-panel state-empty">
@@ -380,11 +381,11 @@
         <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="10" y="6" width="28" height="36" rx="4"/><path d="M18 16h12M18 24h12M18 32h8"/><circle cx="34" cy="34" r="8" fill="#050506" stroke="currentColor"/><path d="M31 34l2.5 2.5L38 32"/></svg>
       </div>
       <p class="state-title">No clips yet</p>
-      <p>Paste a link above and generate. Demo returns 4 sample cards with <strong>VOID Resonance</strong>.</p>
+      <p>Paste a link and generate. You’ll get 4 Shorts-style cards — hooks, burn-in captions, cut cues &amp; <strong>VOID Resonance</strong>.</p>
       <ol class="empty-checklist">
         <li>Paste a YouTube or TikTok URL</li>
-        <li>Pick Viral / Story / Funny + EN/SV</li>
-        <li>Hit Generate — copy captions when ready</li>
+        <li>Pick Viral / Story / Funny — each looks different</li>
+        <li>Generate → preview → copy / share / download</li>
       </ol>
     </div>
 
@@ -393,10 +394,12 @@
         <h2>Your clips</h2>
         <div class="results-header-actions">
           <span id="results-meta" class="results-meta">4 clips · demo</span>
-          <button type="button" class="btn btn-ghost btn-sm" id="copy-all-captions" title="Copy every caption + hashtags">Copy all captions</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="copy-all-captions" title="Copy every caption + hashtags">Copy all</button>
+          <button type="button" class="btn btn-primary btn-sm" id="regenerate-btn" title="Run generate again on the same link">Regenerate</button>
         </div>
       </div>
-      <div id="clips-grid" class="clips-grid aspect-9-16"></div>
+      <p id="results-flow" class="results-flow" hidden>Preview the cut → copy caption or share → download pack (Pro) → tweak style &amp; regenerate</p>
+      <div id="clips-grid" class="clips-grid aspect-9-16" data-style="viral"></div>
       <div class="hashtag-pack" id="hashtag-pack">
         <div class="hashtag-pack-head">
           <span class="input-label">Hashtag pack</span>
@@ -407,7 +410,7 @@
       <div class="export-pack">
         <div class="export-pack-head">
           <span class="input-label">Export pack</span>
-          <span class="export-hint">Demo · captions only</span>
+          <span class="export-hint">Demo · captions + Resonance + cut cues</span>
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="copy-export-pack">Copy all captions</button>
       </div>

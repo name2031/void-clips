@@ -5,147 +5,251 @@
   var CLIPS = {
     viral: {
       en: [
-        { hook: "Nobody expected this ending", duration: ":28", label: "Peak reaction", grad: "grad-1" },
-        { hook: "Wait for the plot twist…", duration: ":22", label: "Hook open", grad: "grad-2" },
-        { hook: "This tip changed everything", duration: ":35", label: "Value drop", grad: "grad-3" },
-        { hook: "POV: you finally get it", duration: ":18", label: "Relatable cut", grad: "grad-4" },
+        { hook: "Stop scrolling — the ending isn't what you think", caption: "WAIT FOR IT", duration: ":28", beat: "0:00–0:03 · payoff :22", label: "Cold open", grad: "grad-viral-1", vibe: "shock" },
+        { hook: "I almost deleted this part…", caption: "DON'T SKIP", duration: ":22", beat: "0:00–0:04 · twist :16", label: "Curiosity cut", grad: "grad-viral-2", vibe: "gap" },
+        { hook: "Do this once. Your feed changes.", caption: "SAVE THIS", duration: ":35", beat: "0:02–0:08 · tip drop", label: "Value drop", grad: "grad-viral-3", vibe: "value" },
+        { hook: "POV: you finally get how the game works", caption: "POV", duration: ":18", beat: "0:00–0:02 · mirror", label: "Relatable spike", grad: "grad-viral-4", vibe: "pov" },
       ],
       sv: [
-        { hook: "Ingen förväntade sig det här slutet", duration: ":28", label: "Peak-reaktion", grad: "grad-1" },
-        { hook: "Vänta på plot twist…", duration: ":22", label: "Hook-öppning", grad: "grad-2" },
-        { hook: "Det här tipset ändrade allt", duration: ":35", label: "Value-drop", grad: "grad-3" },
-        { hook: "POV: du fattar äntligen", duration: ":18", label: "Relaterbart", grad: "grad-4" },
+        { hook: "Sluta scrolla — slutet är inte vad du tror", caption: "VÄNTA", duration: ":28", beat: "0:00–0:03 · payoff :22", label: "Cold open", grad: "grad-viral-1", vibe: "shock" },
+        { hook: "Jag höll på att radera den här delen…", caption: "SKIPPA INTE", duration: ":22", beat: "0:00–0:04 · twist :16", label: "Curiosity-cut", grad: "grad-viral-2", vibe: "gap" },
+        { hook: "Gör det här en gång. Feeden ändras.", caption: "SPARA", duration: ":35", beat: "0:02–0:08 · tip", label: "Value-drop", grad: "grad-viral-3", vibe: "value" },
+        { hook: "POV: du fattar äntligen hur spelet funkar", caption: "POV", duration: ":18", beat: "0:00–0:02 · spegel", label: "Relaterbart", grad: "grad-viral-4", vibe: "pov" },
       ],
     },
     story: {
       en: [
-        { hook: "It started with one message…", duration: ":32", label: "Cold open", grad: "grad-1" },
-        { hook: "Then everything went wrong", duration: ":41", label: "Rising beat", grad: "grad-2" },
-        { hook: "The part they never tell you", duration: ":27", label: "Reveal", grad: "grad-3" },
-        { hook: "And that's why I left", duration: ":19", label: "Payoff", grad: "grad-4" },
+        { hook: "It started with one message I shouldn't have opened", caption: "PART 1", duration: ":32", beat: "0:00–0:05 · cold open", label: "Cold open", grad: "grad-story-1", vibe: "open" },
+        { hook: "Then the silence got loud", caption: "THEN…", duration: ":41", beat: "0:08–0:18 · escalate", label: "Rising beat", grad: "grad-story-2", vibe: "rise" },
+        { hook: "Nobody warned me about this part", caption: "THE CUT", duration: ":27", beat: "0:12–0:20 · reveal", label: "Reveal", grad: "grad-story-3", vibe: "reveal" },
+        { hook: "That's the night I walked out", caption: "END.", duration: ":19", beat: "0:14–0:19 · payoff", label: "Payoff", grad: "grad-story-4", vibe: "payoff" },
       ],
       sv: [
-        { hook: "Det började med ett meddelande…", duration: ":32", label: "Cold open", grad: "grad-1" },
-        { hook: "Sen gick allt fel", duration: ":41", label: "Uppbyggnad", grad: "grad-2" },
-        { hook: "Det de aldrig berättar", duration: ":27", label: "Avslöjande", grad: "grad-3" },
-        { hook: "Och därför gick jag", duration: ":19", label: "Payoff", grad: "grad-4" },
+        { hook: "Det började med ett meddelande jag inte borde öppnat", caption: "DEL 1", duration: ":32", beat: "0:00–0:05 · cold open", label: "Cold open", grad: "grad-story-1", vibe: "open" },
+        { hook: "Sen blev tystnaden högljudd", caption: "SEN…", duration: ":41", beat: "0:08–0:18 · uppbyggnad", label: "Uppbyggnad", grad: "grad-story-2", vibe: "rise" },
+        { hook: "Ingen varnade mig för den här delen", caption: "KLIPPET", duration: ":27", beat: "0:12–0:20 · reveal", label: "Avslöjande", grad: "grad-story-3", vibe: "reveal" },
+        { hook: "Det var natten jag gick", caption: "SLUT.", duration: ":19", beat: "0:14–0:19 · payoff", label: "Payoff", grad: "grad-story-4", vibe: "payoff" },
       ],
     },
     funny: {
       en: [
-        { hook: "Bro really said that out loud", duration: ":15", label: "Reaction", grad: "grad-1" },
-        { hook: "My brain at 3am be like", duration: ":24", label: "Chaos cut", grad: "grad-2" },
-        { hook: "When the plan fails instantly", duration: ":31", label: "Fail edit", grad: "grad-3" },
-        { hook: "I can't with this energy", duration: ":20", label: "Punchline", grad: "grad-4" },
+        { hook: "Bro said it with his whole chest", caption: "NO FILTER", duration: ":15", beat: "0:00–0:02 · punch", label: "Reaction", grad: "grad-funny-1", vibe: "react" },
+        { hook: "My brain at 3am has no HR department", caption: "3AM BRAIN", duration: ":24", beat: "0:03–0:10 · chaos", label: "Chaos cut", grad: "grad-funny-2", vibe: "chaos" },
+        { hook: "The plan lasted 0.4 seconds", caption: "FAIL EDIT", duration: ":31", beat: "0:05–0:12 · crash", label: "Fail edit", grad: "grad-funny-3", vibe: "fail" },
+        { hook: "This energy needs a warning label", caption: "MUTE?", duration: ":20", beat: "0:00–0:04 · closer", label: "Punchline", grad: "grad-funny-4", vibe: "punch" },
       ],
       sv: [
-        { hook: "Bro sa det där högt på riktigt", duration: ":15", label: "Reaktion", grad: "grad-1" },
-        { hook: "Min hjärna kl 03:00 typ", duration: ":24", label: "Kaos-klipp", grad: "grad-2" },
-        { hook: "När planen failar direkt", duration: ":31", label: "Fail-edit", grad: "grad-3" },
-        { hook: "Jag klarar inte den här energin", duration: ":20", label: "Punchline", grad: "grad-4" },
+        { hook: "Bro sa det med hela bröstet", caption: "INGEN FILTER", duration: ":15", beat: "0:00–0:02 · punch", label: "Reaktion", grad: "grad-funny-1", vibe: "react" },
+        { hook: "Min hjärna kl 03:00 har ingen HR-avdelning", caption: "03:00 HJÄRNA", duration: ":24", beat: "0:03–0:10 · kaos", label: "Kaos-klipp", grad: "grad-funny-2", vibe: "chaos" },
+        { hook: "Planen höll i 0,4 sekunder", caption: "FAIL-EDIT", duration: ":31", beat: "0:05–0:12 · krasch", label: "Fail-edit", grad: "grad-funny-3", vibe: "fail" },
+        { hook: "Den här energin behöver en varningsetikett", caption: "MUTE?", duration: ":20", beat: "0:00–0:04 · closer", label: "Punchline", grad: "grad-funny-4", vibe: "punch" },
       ],
     },
   };
 
   var HASHTAGS = {
-    viral: "#fyp #viral #foryou #clip #creator #voidclips",
-    story: "#storytime #fyp #relatable #creator #shorts #voidclips",
-    funny: "#funny #memes #fyp #comedy #viral #voidclips",
+    viral: "#fyp #viral #foryoupage #hook #shorts #reels #clip #creator #voidclips #algorithm",
+    story: "#storytime #fyp #relatable #part1 #shorts #reels #truestory #creator #voidclips",
+    funny: "#funny #memes #fyp #comedy #fail #relatable #shorts #reels #voidclips",
   };
 
   var HASHTAGS_SV = {
-    viral: "#fyp #viral #fördig #klipp #creator #voidclips",
-    story: "#storytime #fyp #relaterbart #creator #shorts #voidclips",
-    funny: "#roligt #memes #fyp #komedi #viral #voidclips",
+    viral: "#fyp #viral #fördig #hook #shorts #reels #klipp #creator #voidclips #algoritm",
+    story: "#storytime #fyp #relaterbart #del1 #shorts #reels #sannhistoria #creator #voidclips",
+    funny: "#roligt #memes #fyp #komedi #fail #relaterbart #shorts #reels #voidclips",
   };
 
-
-  /* VOID Resonance — unique differentiator (demo scores + voice, no real AI) */
+  /* VOID Resonance — viral score + persona rewrite + pin bait (demo, no real AI) */
   var RESONANCE = {
     viral: [
       {
-        score: 94,
-        why: "Cold open + delayed payoff. Thumb stops before the brain does.",
-        persona: "You weren't supposed to see this ending.",
-        pin: "Pin this: the raw cut lives in the comments. Steal it."
+        score: 96,
+        why: "Pattern interrupt in frame 1 + delayed payoff. Thumb stops; brain stays. Best as cold open.",
+        persona: "You weren't supposed to see this ending. Watch anyway.",
+        pin: "Pin: timestamp the second it flipped. Steal the raw cut in the comments.",
+        timing: "Hook hard 0–3s · hold face · drop twist after :18"
       },
       {
-        score: 88,
-        why: "Curiosity gap in the first frame. Pattern interrupt, not bait.",
-        persona: "Wait for it — then pretend you always knew.",
-        pin: "First comment: which second broke you? Drop the timestamp."
+        score: 91,
+        why: "Deletion tease = curiosity gap without cheap bait. High completion, mid share.",
+        persona: "I almost deleted this. Then I remembered who this is for.",
+        pin: "First comment: which second broke you? Drop it. No soft launches.",
+        timing: "Tease line on-screen 0–4s · cut before they expect"
       },
       {
-        score: 81,
-        why: "Value drop framed as a secret. Saves > likes energy.",
-        persona: "This tip rewired how I move. Keep or lose.",
-        pin: "Save this before the algo buries it. You're welcome."
+        score: 84,
+        why: "Value framed as a secret. Saves > likes. Soft ceiling unless duet bait lands.",
+        persona: "Do this once. Keep it or lose the edge — your call.",
+        pin: "Save before the algo buries it. Tag the one who still scrolls past gold.",
+        timing: "Promise early · tip clean mid · CTA last 3s"
       },
       {
-        score: 73,
-        why: "POV mirror — low friction, high share. Soft viral ceiling.",
+        score: 78,
+        why: "POV mirror — low friction, high share velocity. Soft viral ceiling alone; strong as series glue.",
         persona: "POV: the feed finally got you. Don't flinch.",
-        pin: "Tag the one who needs this slap. No soft launches."
+        pin: "Tag who needs this slap. Duet if you're still pretending.",
+        timing: "Face cam + text lock 0–2s · no intro fluff"
       }
     ],
     story: [
       {
-        score: 91,
-        why: "Cold open as unfinished sentence. Scroll debt kicks in.",
-        persona: "It started with one message. I should've ignored it.",
-        pin: "Part 2 if this hits 10k. Comment 'void' if you're still here."
+        score: 93,
+        why: "Unfinished sentence as cold open. Scroll debt kicks in before the plot does.",
+        persona: "It started with one message. I should've left it unread.",
+        pin: "Part 2 if this hits. Comment 'void' if you're still in the room.",
+        timing: "Text-first 0–5s · hold silence · no music swell yet"
       },
       {
-        score: 85,
-        why: "Escalation beat — stakes rise before payoff. Retention glue.",
-        persona: "Then everything went wrong. Clock that silence.",
-        pin: "Tell me where you checked out. I'll know if you're lying."
+        score: 87,
+        why: "Escalation beat — stakes rise before payoff. Retention glue for sequels.",
+        persona: "Then the silence got loud. Clock it.",
+        pin: "Tell me where you checked out. I'll know if you're lying.",
+        timing: "Escalate 8–18s · cut on breath, not on answer"
       },
       {
-        score: 79,
-        why: "Forbidden knowledge frame. Whispers travel farther than shouts.",
-        persona: "The part they never tell you — cut clean, no mercy.",
-        pin: "Pinned: the line they cut. Full version in my bio."
+        score: 81,
+        why: "Forbidden-knowledge frame. Whispers travel farther than shouts on Shorts.",
+        persona: "Nobody warned me about this part — cut clean, no mercy.",
+        pin: "Pinned: the line they cut. Full version lives in my bio.",
+        timing: "Reveal window 12–20s · caption punch, not narration dump"
       },
       {
-        score: 67,
-        why: "Payoff clip — strong for sequels, weaker cold. Still posts.",
-        persona: "And that's why I left. No encore. No apology.",
-        pin: "If this found you, it wasn't an accident. Say so."
+        score: 72,
+        why: "Payoff clip — strong for sequels, weaker cold. Still posts if Part 1 warmed them.",
+        persona: "That's the night I walked out. No encore. No apology.",
+        pin: "If this found you, it wasn't an accident. Say so.",
+        timing: "Land payoff by :16 · hold stare 2s · hard out"
       }
     ],
     funny: [
       {
-        score: 97,
-        why: "Reaction bait with quotable shame. Share velocity maxed.",
-        persona: "Bro really said that out loud. Archive it.",
-        pin: "Quote-tweet energy only. Tag the guilty. Softblock the rest."
+        score: 98,
+        why: "Quotable shame + reaction bait. Share velocity maxed for duets/stitches.",
+        persona: "Bro said it with his whole chest. Archive it.",
+        pin: "Quote energy only. Tag the guilty. Softblock the rest.",
+        timing: "Punch in 0–2s · reaction hold · no setup tax"
       },
       {
-        score: 86,
-        why: "3am brain = universal. Chaos cut keeps rewatch loop alive.",
-        persona: "My brain at 3am. No notes. No peace.",
-        pin: "Comment your 3am thought. Worst one wins a follow."
+        score: 89,
+        why: "3am brain = universal. Chaos cut keeps the rewatch loop alive.",
+        persona: "My brain at 3am has no HR. No notes. No peace.",
+        pin: "Comment your 3am thought. Worst one gets a follow.",
+        timing: "Chaos beats 3–10s · jump cuts · text spam ok"
       },
       {
-        score: 76,
-        why: "Fail edit — schadenfreude with clean punch. Mid-feed killer.",
-        persona: "When the plan fails instantly. Peak VOID.",
-        pin: "Duet with your own failure. Don't clean it up."
+        score: 80,
+        why: "Fail edit — clean schadenfreude punch. Mid-feed killer on second watch.",
+        persona: "The plan lasted 0.4 seconds. Peak VOID.",
+        pin: "Duet with your own failure. Don't clean it up.",
+        timing: "Setup 5s · crash hard · freeze on face"
       },
       {
-        score: 62,
-        why: "Energy punchline — solid closer, softer cold open alone.",
-        persona: "I can't with this energy. Mute or match.",
-        pin: "First comment: mute or match? Pick a side."
+        score: 68,
+        why: "Energy closer — solid end-card, softer as cold open alone. Pair with stronger hook.",
+        persona: "This energy needs a warning label. Mute or match.",
+        pin: "First comment: mute or match? Pick a side.",
+        timing: "Closer energy 0–4s · end on question, not joke dump"
+      }
+    ]
+  };
+
+  var RESONANCE_SV = {
+    viral: [
+      {
+        score: 96,
+        why: "Mönsterbrott i bild 1 + fördröjd payoff. Tummen stannar; hjärnan stannar kvar.",
+        persona: "Du skulle inte sett det här slutet. Titta ändå.",
+        pin: "Pin: tidsstämpla sekunden det vände. Råklippet ligger i kommentarerna.",
+        timing: "Hook hårt 0–3s · håll ansikte · twist efter :18"
+      },
+      {
+        score: 91,
+        why: "Radera-tease = nyfikenhetsgap utan billigt bete. Hög completion.",
+        persona: "Jag höll på att radera det här. Sen mindes jag vem det är för.",
+        pin: "Första kommentaren: vilken sekund bröt dig? Inga mjuka starter.",
+        timing: "Tease på skärm 0–4s · klipp innan de förväntar sig"
+      },
+      {
+        score: 84,
+        why: "Värde som hemlighet. Sparningar > likes. Tak om du inte lägger duet-bete.",
+        persona: "Gör det en gång. Behåll kanten — eller tappa den.",
+        pin: "Spara innan algon gräver ner det. Tagga den som scrollar förbi guld.",
+        timing: "Löfte tidigt · tip mitt · CTA sista 3s"
+      },
+      {
+        score: 78,
+        why: "POV-spegel — låg friktion, hög share. Mjukt viraltak ensam; stark i serie.",
+        persona: "POV: feeden fick dig äntligen. Darra inte.",
+        pin: "Tagga den som behöver smällen. Duetta om du fortfarande låtsas.",
+        timing: "Ansikte + text 0–2s · noll intro-fluff"
+      }
+    ],
+    story: [
+      {
+        score: 93,
+        why: "Oavslutad mening som cold open. Scroll-skuld innan plotten startar.",
+        persona: "Det började med ett meddelande. Jag borde lämnat det oläst.",
+        pin: "Del 2 om det här tar. Kommentera 'void' om du fortfarande är kvar.",
+        timing: "Text först 0–5s · håll tystnad · ingen musik-sväll ännu"
+      },
+      {
+        score: 87,
+        why: "Eskalering — insatserna stiger före payoff. Retention-lim för uppföljare.",
+        persona: "Sen blev tystnaden högljudd. Klocka den.",
+        pin: "Säg var du checkade ut. Jag märker om du ljuger.",
+        timing: "Eskalera 8–18s · klipp på andetag, inte på svar"
+      },
+      {
+        score: 81,
+        why: "Förbjuden kunskap-ram. Viskningar går längre än skrik på Shorts.",
+        persona: "Ingen varnade mig för den här delen — rent klipp, ingen nåd.",
+        pin: "Pin: raden de klippte. Full version i bio.",
+        timing: "Reveal 12–20s · caption-punch, inte narrationsdump"
+      },
+      {
+        score: 72,
+        why: "Payoff — stark i serie, svagare kall. Funkar om del 1 värmt upp.",
+        persona: "Det var natten jag gick. Ingen encore. Ingen ursäkt.",
+        pin: "Om det här hittade dig var det ingen slump. Säg det.",
+        timing: "Landá payoff till :16 · håll blick 2s · hårt ut"
+      }
+    ],
+    funny: [
+      {
+        score: 98,
+        why: "Citerbar skam + reaktionsbete. Max share-hastighet för duett/stitch.",
+        persona: "Bro sa det med hela bröstet. Arkivera.",
+        pin: "Bara quote-energi. Tagga den skyldiga. Softblock resten.",
+        timing: "Punch 0–2s · håll reaktion · ingen setup-skatt"
+      },
+      {
+        score: 89,
+        why: "03:00-hjärna = universellt. Kaos-klipp håller omslingan vid liv.",
+        persona: "Min hjärna kl 03:00 har ingen HR. Inga anteckningar. Ingen frid.",
+        pin: "Kommentera din 03:00-tanke. Sämst vinner en follow.",
+        timing: "Kaos 3–10s · hoppklipp · textspam ok"
+      },
+      {
+        score: 80,
+        why: "Fail-edit — ren skadeglädje. Mid-feed-mördare på andra tittningen.",
+        persona: "Planen höll i 0,4 sekunder. Peak VOID.",
+        pin: "Duetta med ditt eget fail. Putsa inte.",
+        timing: "Setup 5s · krascha hårt · frys i ansiktet"
+      },
+      {
+        score: 68,
+        why: "Energi-closer — solid slutkort, mjukare som kall öppning. Para med starkare hook.",
+        persona: "Den här energin behöver en varning. Mute eller matcha.",
+        pin: "Första kommentaren: mute eller matcha? Välj sida.",
+        timing: "Closer 0–4s · avsluta på fråga, inte skämt-dump"
       }
     ]
   };
 
   var PROGRESS = [
-    { label: "Fetch", status: "Fetching video…" },
-    { label: "Find hooks", status: "Finding viral hooks…" },
-    { label: "Cut clips", status: "Cutting 15–45s clips…" },
+    { label: "Fetch", status: "Pulling source frames…" },
+    { label: "Find hooks", status: "Scoring hooks & Resonance…" },
+    { label: "Cut clips", status: "Framing 15–45s premium cuts…" },
   ];
 
   var HISTORY_KEY = "void_clips_history";
@@ -2163,6 +2267,15 @@
       btn.classList.toggle("active", btn.getAttribute("data-aspect") === state.aspect);
     });
     applyAspectChrome();
+    var hint = document.getElementById("style-hint");
+    if (hint) {
+      hint.textContent =
+        state.style === "story"
+          ? "Story · cold open → escalate → reveal → payoff"
+          : state.style === "funny"
+            ? "Funny · reaction punch · chaos · fail energy"
+            : "Viral · interrupt + delayed payoff";
+    }
   }
 
   var stylePresets = document.getElementById("style-presets");
@@ -2176,6 +2289,10 @@
       state.style = btn.getAttribute("data-style");
       savePrefs();
       syncSegmented();
+      if (lastClips.length && resultsEl && resultsEl.classList.contains("active")) {
+        renderClips();
+        showToast("Style → " + (state.style === "viral" ? "Viral Hook" : state.style === "story" ? "Story" : "Funny"));
+      }
       markOnboardStep("style");
     });
   }
@@ -2187,6 +2304,9 @@
       state.lang = btn.getAttribute("data-lang");
       savePrefs();
       syncSegmented();
+      if (lastClips.length && resultsEl && resultsEl.classList.contains("active")) {
+        renderClips();
+      }
       markOnboardStep("style");
     });
   }
@@ -2198,6 +2318,9 @@
       state.aspect = btn.getAttribute("data-aspect");
       savePrefs();
       syncSegmented();
+      if (lastClips.length && resultsEl && resultsEl.classList.contains("active")) {
+        renderClips();
+      }
       markOnboardStep("aspect");
     });
   }
@@ -3577,17 +3700,22 @@
 
   /* —— clips —— */
   function attachResonance(clip, index) {
-    var pack = RESONANCE[state.style] || RESONANCE.viral;
+    var useSv = state.lang === "sv";
+    var table = useSv ? RESONANCE_SV : RESONANCE;
+    var pack = table[state.style] || table.viral;
     var r = pack[index] || pack[0] || {
       score: 75,
       why: "Solid hook density for the feed.",
       persona: "Stay sharp. Post colder.",
-      pin: "Pinned: drop your take. No soft comments."
+      pin: "Pinned: drop your take. No soft comments.",
+      timing: "Hook early · cut clean · end on a question"
     };
     clip.score = r.score;
     clip.why = r.why;
     clip.persona = r.persona;
     clip.pin = r.pin;
+    clip.timing = r.timing || clip.beat || "";
+    clip.styleKey = state.style;
     return clip;
   }
 
@@ -3606,9 +3734,13 @@
             {
               hook: en[i].hook,
               hookSv: sv[i].hook,
+              caption: en[i].caption,
+              captionSv: sv[i].caption,
               duration: en[i].duration,
+              beat: en[i].beat,
               label: en[i].label,
               grad: en[i].grad,
+              vibe: en[i].vibe,
             },
             i
           )
@@ -3637,9 +3769,17 @@
     var clips = lastClips.length ? lastClips : buildClipSet();
     var tags = hashtagPack();
     var lines = [];
+    lines.push("VOID Clips · " + (state.style || "viral").toUpperCase() + " · " + (state.aspect || "9:16"));
+    lines.push("");
     clips.forEach(function (clip, i) {
-      lines.push("--- Clip " + (i + 1) + " ---");
+      lines.push("--- Clip " + (i + 1) + " · " + (clip.label || "") + " · " + (clip.duration || "") + " ---");
       lines.push(captionFor(clip));
+      if (clip.caption) lines.push("On-screen: " + clip.caption + (clip.captionSv ? " / " + clip.captionSv : ""));
+      if (clip.beat) lines.push("Beat: " + clip.beat);
+      if (clip.timing) lines.push("Timing: " + clip.timing);
+      if (typeof clip.score === "number") lines.push("Resonance: " + clip.score + "/100 — " + (clip.why || ""));
+      if (clip.persona) lines.push("Persona: " + clip.persona);
+      if (clip.pin) lines.push("Pin: " + clip.pin);
       lines.push(tags);
       lines.push("");
     });
@@ -3710,6 +3850,13 @@
   function resonanceBlockHtml(clip) {
     var score = typeof clip.score === "number" ? clip.score : 75;
     var pct = Math.max(0, Math.min(100, score));
+    var tier =
+      score >= 92 ? "S-tier viral" : score >= 82 ? "Strong keep" : score >= 72 ? "Postable" : "Pair with stronger hook";
+    var timingHtml = clip.timing
+      ? '<p class="resonance-timing"><span class="resonance-why-label">Cut cue</span> ' +
+        escapeHtml(clip.timing) +
+        "</p>"
+      : "";
     return (
       '<div class="resonance-block" data-resonance>' +
       '<div class="resonance-head">' +
@@ -3727,9 +3874,13 @@
       pct +
       '%"></div>' +
       "</div>" +
+      '<p class="resonance-tier">' +
+      escapeHtml(tier) +
+      "</p>" +
       '<p class="resonance-why"><span class="resonance-why-label">Why it hits</span> ' +
       escapeHtml(clip.why || "") +
       "</p>" +
+      timingHtml +
       '<div class="resonance-row">' +
       '<div class="resonance-field">' +
       '<div class="resonance-field-head">' +
@@ -3766,48 +3917,144 @@
     if (status) status.textContent = state.voidMode ? "On" : "Off";
   }
 
+  function overlayCaption(clip) {
+    if (state.lang === "sv" && clip.caption) {
+      /* Swedish packs store caption in caption field already when lang=sv */
+      return clip.caption;
+    }
+    if (clip.captionSv && state.lang === "sv") return clip.captionSv;
+    if (state.lang === "both" && clip.caption && clip.captionSv) {
+      return clip.caption + " · " + clip.captionSv;
+    }
+    return clip.caption || "";
+  }
+
+  function sharePayload(clip) {
+    var tags = hashtagPack();
+    return (
+      captionFor(clip) +
+      "\n\n" +
+      (clip.persona ? clip.persona + "\n\n" : "") +
+      tags +
+      "\n\n— via VOID Clips"
+    );
+  }
+
+  function downloadClipPack(clip, index) {
+    var body =
+      "VOID Clips export\n" +
+      "Style: " +
+      (state.style || "viral") +
+      " · Aspect: " +
+      (state.aspect || "9:16") +
+      "\n\n" +
+      captionFor(clip) +
+      "\n\nOn-screen: " +
+      (overlayCaption(clip) || "—") +
+      "\nBeat: " +
+      (clip.beat || "—") +
+      "\nTiming: " +
+      (clip.timing || "—") +
+      "\nResonance: " +
+      (typeof clip.score === "number" ? clip.score + "/100" : "—") +
+      "\n" +
+      (clip.why || "") +
+      "\n\nPersona:\n" +
+      (clip.persona || "") +
+      "\n\nPin:\n" +
+      (clip.pin || "") +
+      "\n\n" +
+      hashtagPack() +
+      "\n";
+    var blob = new Blob([body], { type: "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "void-clip-" + (index + 1) + "-" + (state.style || "viral") + ".txt";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 500);
+  }
+
   function renderClips(sourceLabel) {
     var clips = buildClipSet();
     lastClips = clips;
     clipsGrid.innerHTML = "";
     applyAspectChrome();
     applyVoidModeChrome();
+    clipsGrid.setAttribute("data-style", state.style || "viral");
 
-    clips.forEach(function (clip) {
+    clips.forEach(function (clip, index) {
       var titleHtml = escapeHtml(clip.hook);
       if (clip.hookSv) {
         titleHtml += '<span class="hook-sv">' + escapeHtml(clip.hookSv) + "</span>";
       }
+      var burn = overlayCaption(clip);
+      var score = typeof clip.score === "number" ? clip.score : 75;
+      var styleKey = state.style || "viral";
 
       var card = document.createElement("article");
-      card.className = "clip-card" + (state.voidMode ? " has-resonance-emphasis" : "");
+      card.className =
+        "clip-card style-" +
+        styleKey +
+        (state.voidMode ? " has-resonance-emphasis" : "");
+      card.setAttribute("data-clip-index", String(index));
       card.innerHTML =
         '<div class="clip-thumb ' +
-        clip.grad +
+        escapeHtml(clip.grad || "grad-viral-1") +
+        '" data-vibe="' +
+        escapeHtml(clip.vibe || "") +
         '">' +
+        '<div class="thumb-safe safe-top" aria-hidden="true"></div>' +
+        '<div class="thumb-safe safe-bottom" aria-hidden="true"></div>' +
+        '<div class="thumb-grain" aria-hidden="true"></div>' +
+        '<div class="thumb-motion" aria-hidden="true"></div>' +
+        '<span class="thumb-platform">' +
+        escapeHtml(sourceLabel || "Shorts") +
+        "</span>" +
+        '<span class="thumb-score" title="VOID Resonance">' +
+        score +
+        "</span>" +
+        (burn
+          ? '<p class="thumb-caption" aria-hidden="true">' + escapeHtml(burn) + "</p>"
+          : "") +
+        '<div class="thumb-progress" aria-hidden="true"><span class="thumb-progress-fill"></span></div>' +
         playIconSvg() +
         '<span class="duration">' +
-        clip.duration +
+        escapeHtml(clip.duration || "") +
         "</span>" +
+        (clip.beat
+          ? '<span class="thumb-beat">' + escapeHtml(clip.beat) + "</span>"
+          : "") +
         "</div>" +
         '<div class="clip-body">' +
+        '<div class="clip-rank">Clip ' +
+        (index + 1) +
+        " of 4</div>" +
         '<h3 class="clip-hook">' +
         titleHtml +
         "</h3>" +
         '<div class="clip-meta">' +
         "<span>" +
-        escapeHtml(clip.label) +
+        escapeHtml(clip.label || "") +
         "</span>" +
         '<span class="dot"></span>' +
         '<span class="aspect-label">' +
         aspectMetaLabel(state.aspect) +
         "</span>" +
+        '<span class="dot"></span>' +
+        '<span class="style-chip">' +
+        escapeHtml(styleKey) +
+        "</span>" +
         "</div>" +
         resonanceBlockHtml(clip) +
         '<div class="clip-actions">' +
         '<button type="button" class="btn btn-ghost btn-sm copy-caption">Copy caption</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm share-clip">Share</button>' +
         (isOwner() || isPro()
-          ? '<button type="button" class="btn btn-primary btn-sm download-pro" title="Pro / Owner export (demo)">Download</button>'
+          ? '<button type="button" class="btn btn-primary btn-sm download-pro" title="Download caption pack">Download</button>'
           : '<button type="button" class="btn btn-primary btn-sm btn-pro" disabled title="Pro unlocks downloads">Download</button>') +
         "</div>" +
         "</div>";
@@ -3818,10 +4065,34 @@
         markOnboardStep("copy");
       });
 
+      var shareBtn = card.querySelector(".share-clip");
+      if (shareBtn) {
+        shareBtn.addEventListener("click", function () {
+          var payload = sharePayload(clip);
+          if (navigator.share) {
+            navigator
+              .share({ title: "VOID Clips", text: payload })
+              .then(function () {
+                showToast("Shared");
+                markOnboardStep("copy");
+              })
+              .catch(function () {
+                copyText(payload, shareBtn, "Copied!");
+                markOnboardStep("copy");
+              });
+          } else {
+            copyText(payload, shareBtn, "Copied!");
+            markOnboardStep("copy");
+          }
+        });
+      }
+
       var dlBtn = card.querySelector(".download-pro");
       if (dlBtn) {
         dlBtn.addEventListener("click", function () {
-          showToast(isOwner() ? "Owner export" : "Pro export (demo)");
+          downloadClipPack(clip, index);
+          showToast(isOwner() ? "Owner pack downloaded" : "Pro pack downloaded");
+          markOnboardStep("copy");
         });
       }
 
@@ -3837,6 +4108,17 @@
         pinBtn.addEventListener("click", function () {
           copyText(clip.pin || "", this, "Copied!");
           markOnboardStep("copy");
+        });
+      }
+
+      /* Preview play pulse on thumb tap */
+      var thumb = card.querySelector(".clip-thumb");
+      if (thumb) {
+        thumb.addEventListener("click", function () {
+          thumb.classList.remove("is-playing");
+          void thumb.offsetWidth;
+          thumb.classList.add("is-playing");
+          showToast("Preview · demo motion");
         });
       }
 
@@ -3858,6 +4140,9 @@
 
     hashtagText.textContent = hashtagPack();
     setEmptyVisible(false);
+
+    var flow = document.getElementById("results-flow");
+    if (flow) flow.hidden = false;
   }
 
   function copyAllCaptions(btn) {
@@ -3933,12 +4218,25 @@
     });
   }
 
+  function setGenerateBusy(busy) {
+    if (!generateBtn) return;
+    if (busy) {
+      if (!generateBtn.dataset.label) generateBtn.dataset.label = generateBtn.textContent;
+      generateBtn.textContent = "Generating…";
+      generateBtn.classList.add("is-generating");
+      generateBtn.disabled = true;
+    } else {
+      generateBtn.textContent = generateBtn.dataset.label || "Generate";
+      generateBtn.classList.remove("is-generating");
+    }
+  }
+
   function startLoading(onDone) {
     resultsEl.classList.remove("active");
     setEmptyVisible(false);
     hideError();
     loadingEl.classList.add("active");
-    generateBtn.disabled = true;
+    setGenerateBusy(true);
 
     var step = 0;
     setProgressStep(0);
@@ -3958,12 +4256,10 @@
       loadingTimer = null;
       setProgressStep(PROGRESS.length);
       loadingEl.classList.remove("active");
-      if (currentUser && (isOwner() || isPro() || currentUser.credits > 0)) {
-        generateBtn.disabled = false;
-      }
+      setGenerateBusy(false);
       updateCreditsUI();
       onDone();
-    }, 2700);
+    }, 2900);
   }
 
   function generate() {
@@ -4017,6 +4313,18 @@
   }
 
   if (generateBtn) generateBtn.addEventListener("click", generate);
+
+  var regenerateBtn = document.getElementById("regenerate-btn");
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener("click", function () {
+      if (urlInput && (urlInput.value || "").trim()) {
+        generate();
+      } else {
+        showToast("Paste a link first");
+        if (urlInput) urlInput.focus();
+      }
+    });
+  }
 
   if (urlInput) {
     urlInput.addEventListener("keydown", function (e) {
