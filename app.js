@@ -5131,12 +5131,16 @@
     return null;
   }
 
-  function sourceThumbHtml(url) {
+  function resolveSourceThumb(url) {
     var meta = metaForUrl(url);
     var thumb = meta && meta.thumbnail;
-    if (!thumb && meta && meta.youtubeId) {
-      thumb = youtubeThumbCandidates(meta.youtubeId)[0];
-    }
+    var ytId = (meta && meta.youtubeId) || youtubeIdFromUrl(url || "");
+    if (!thumb && ytId) thumb = youtubeThumbCandidates(ytId)[0];
+    return thumb || "";
+  }
+
+  function sourceThumbHtml(url) {
+    var thumb = resolveSourceThumb(url);
     if (!thumb) return "";
     return (
       '<div class="thumb-source" style="background-image:url(\'' +
@@ -5146,9 +5150,56 @@
   }
 
   function sourceThumbClass(url) {
-    var meta = metaForUrl(url);
-    if (meta && (meta.thumbnail || meta.youtubeId)) return " has-source-thumb";
+    if (resolveSourceThumb(url)) return " has-source-thumb";
     return "";
+  }
+
+  function refreshSourceThumbsOnCards() {
+    if (!clipsGrid || !lastSourceUrl) return;
+    var url = lastSourceUrl;
+    var thumb = resolveSourceThumb(url);
+    if (!thumb) return;
+    var safe = escapeHtml(thumb).replace(/'/g, "%27");
+    clipsGrid.querySelectorAll(".clip-thumb").forEach(function (el) {
+      if (!el.classList.contains("has-source-thumb")) el.classList.add("has-source-thumb");
+      var src = el.querySelector(".thumb-source");
+      if (src) {
+        src.style.backgroundImage = "url('" + safe + "')";
+      } else {
+        el.insertAdjacentHTML(
+          "afterbegin",
+          '<div class="thumb-source" style="background-image:url(\'' +
+            safe +
+            "')\" aria-hidden=\"true\"></div>"
+        );
+      }
+    });
+    document.querySelectorAll(".batch-group-grid .clip-thumb").forEach(function (el) {
+      /* batch cards use per-group url via data-source-url when present */
+      var card = el.closest(".clip-card");
+      var u = (card && card.getAttribute("data-source-url")) || url;
+      var t = resolveSourceThumb(u);
+      if (!t) return;
+      var s = escapeHtml(t).replace(/'/g, "%27");
+      if (!el.classList.contains("has-source-thumb")) el.classList.add("has-source-thumb");
+      var src = el.querySelector(".thumb-source");
+      if (src) src.style.backgroundImage = "url('" + s + "')";
+      else
+        el.insertAdjacentHTML(
+          "afterbegin",
+          '<div class="thumb-source" style="background-image:url(\'' + s + "')\" aria-hidden=\"true\"></div>"
+        );
+    });
+  }
+
+  function burnInText(clip) {
+    var hook = String((clip && clip.hook) || "").trim();
+    if (hook) {
+      return hook.length > 68 ? hook.slice(0, 65) + "…" : hook;
+    }
+    var cap = overlayCaption(clip);
+    if (!cap) return "";
+    return cap.length > 68 ? cap.slice(0, 65) + "…" : cap;
   }
 
   function clearBatchLinkPreviews() {
@@ -5344,7 +5395,12 @@
     updatePasteDetect();
     markOnboardStep("paste");
     fetchLinkMeta(url).then(function (meta) {
-      if (meta) lastLinkMeta = meta;
+      if (meta) {
+        lastLinkMeta = meta;
+        if (lastSourceUrl === url || !(lastSourceUrl || "").trim()) {
+          refreshSourceThumbsOnCards();
+        }
+      }
     });
 
     var batchGroups = document.getElementById("batch-groups");
@@ -6504,7 +6560,7 @@
       if (clip.hookSv) {
         titleHtml += '<span class="hook-sv">' + escapeHtml(clip.hookSv) + "</span>";
       }
-      var burn = overlayCaption(clip);
+      var burn = burnInText(clip);
       var score = typeof clip.score === "number" ? clip.score : 75;
       var styleKey = state.style || "viral";
       var favOn = isFavorited(clip, lastSourceUrl);
@@ -6514,7 +6570,11 @@
         "clip-card style-" + styleKey + (state.voidMode ? " has-resonance-emphasis" : "");
       card.setAttribute("data-clip-index", String(index));
       var sourceUrl = lastSourceUrl || "";
+      if (sourceUrl) card.setAttribute("data-source-url", sourceUrl);
       card.innerHTML =
+        '<div class="clip-visual-stage">' +
+        '<div class="clip-phone" role="img" aria-label="Clip preview">' +
+        '<div class="clip-phone-notch" aria-hidden="true"></div>' +
         '<div class="clip-thumb ' +
         escapeHtml(clip.grad || "grad-viral-1") +
         sourceThumbClass(sourceUrl) +
@@ -6549,6 +6609,10 @@
         escapeHtml(clip.duration || "") +
         "</span>" +
         (clip.beat ? '<span class="thumb-beat">' + escapeHtml(clip.beat) + "</span>" : "") +
+        "</div>" +
+        '<div class="clip-phone-home" aria-hidden="true"></div>' +
+        "</div>" +
+        '<p class="clip-visual-hint">Tap preview · sample scrub</p>' +
         "</div>" +
         '<div class="clip-body">' +
         '<div class="clip-rank">Clip ' +
@@ -6682,6 +6746,12 @@
           thumb.classList.add("is-playing");
           showToast("Preview · sample motion");
         });
+        /* Subtle auto-scrub so cards feel like clips, not text */
+        if (index === 0) {
+          setTimeout(function () {
+            thumb.classList.add("is-playing");
+          }, 280);
+        }
       }
 
       wireCreatorTools(card, clip, index);
@@ -6999,11 +7069,11 @@
     lastSourceUrl = url;
     var cached = metaForUrl(url);
     if (cached) lastLinkMeta = cached;
-    else {
-      fetchLinkMeta(url).then(function (meta) {
-        if (meta && lastSourceUrl === url) lastLinkMeta = meta;
-      });
-    }
+    fetchLinkMeta(url).then(function (meta) {
+      if (!meta || lastSourceUrl !== url) return;
+      lastLinkMeta = meta;
+      refreshSourceThumbsOnCards();
+    });
     lastGenId = uid("gen");
     var entry = {
       id: lastGenId,
@@ -7084,12 +7154,42 @@
       g.clips.forEach(function (clip, index) {
         var mini = document.createElement("article");
         mini.className = "clip-card style-" + (state.style || "viral");
+        mini.setAttribute("data-source-url", g.url);
+        var burn = burnInText(clip);
+        var score = typeof clip.score === "number" ? clip.score : 75;
         mini.innerHTML =
-          '<div class="clip-body" style="padding-top:1rem">' +
+          '<div class="clip-visual-stage">' +
+          '<div class="clip-phone" role="img" aria-label="Clip preview">' +
+          '<div class="clip-phone-notch" aria-hidden="true"></div>' +
+          '<div class="clip-thumb ' +
+          escapeHtml(clip.grad || "grad-viral-1") +
+          sourceThumbClass(g.url) +
+          '">' +
+          sourceThumbHtml(g.url) +
+          '<div class="thumb-safe safe-top" aria-hidden="true"></div>' +
+          '<div class="thumb-safe safe-bottom" aria-hidden="true"></div>' +
+          '<div class="thumb-grain" aria-hidden="true"></div>' +
+          '<div class="thumb-motion" aria-hidden="true"></div>' +
+          '<span class="thumb-platform">' +
+          escapeHtml(platformFromUrl(g.url)) +
+          "</span>" +
+          '<span class="thumb-score" title="VOID Resonance">' +
+          score +
+          "</span>" +
+          (burn ? '<p class="thumb-caption" aria-hidden="true">' + escapeHtml(burn) + "</p>" : "") +
+          '<div class="thumb-progress" aria-hidden="true"><span class="thumb-progress-fill"></span></div>' +
+          playIconSvg() +
+          '<span class="duration">' +
+          escapeHtml(clip.duration || "") +
+          "</span>" +
+          "</div>" +
+          '<div class="clip-phone-home" aria-hidden="true"></div>' +
+          "</div></div>" +
+          '<div class="clip-body">' +
           '<div class="clip-rank">Clip ' +
           (index + 1) +
           " · Resonance " +
-          (clip.score || 75) +
+          score +
           "</div>" +
           '<h3 class="clip-hook">' +
           escapeHtml(clip.hook) +

@@ -952,8 +952,16 @@ section { padding: 5rem 0; }
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  transform: scale(1.02);
+  transform: scale(1.08);
   pointer-events: none;
+  animation: thumbKen 14s ease-in-out infinite alternate;
+}
+@keyframes thumbKen {
+  from { transform: scale(1.06) translate(0, 0); }
+  to { transform: scale(1.16) translate(-2%, 1.5%); }
+}
+.clip-thumb.is-playing .thumb-source {
+  animation-duration: 2.4s;
 }
 .clip-thumb.has-source-thumb .thumb-motion {
   opacity: 0.42;
@@ -1291,9 +1299,67 @@ section { padding: 5rem 0; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Visual-first phone preview (core for free + Pro) */
+.clip-visual-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 1.1rem 0.85rem 0.85rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 20%, rgba(139, 92, 246, 0.16), transparent 70%),
+    linear-gradient(180deg, #0c0a14 0%, #08060e 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.clip-phone {
+  position: relative;
+  width: min(100%, 210px);
+  border-radius: 22px;
+  padding: 10px 8px 12px;
+  background: linear-gradient(160deg, #2a2a32 0%, #121218 45%, #0a0a0e 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.clip-phone-notch {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38%;
+  height: 7px;
+  border-radius: 999px;
+  background: #050506;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.clip-phone-home {
+  width: 36%;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.clip-visual-hint {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
 .clip-thumb {
   aspect-ratio: 9 / 16;
-  max-height: 280px;
+  width: 100%;
+  max-height: none;
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -1302,6 +1368,8 @@ section { padding: 5rem 0; }
   overflow: hidden;
   cursor: pointer;
   isolation: isolate;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .clip-thumb .thumb-motion {
@@ -1398,24 +1466,28 @@ section { padding: 5rem 0; }
 
 .thumb-caption {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 22%;
+  left: 7%;
+  right: 7%;
+  bottom: 20%;
   z-index: 3;
   margin: 0;
   text-align: center;
-  font-size: clamp(0.78rem, 2.8vw, 1.05rem);
+  font-size: clamp(0.72rem, 3.4vw, 0.98rem);
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.18;
   color: #fff;
   text-shadow:
-    0 1px 0 rgba(0,0,0,0.85),
-    0 0 12px rgba(0,0,0,0.65),
-    0 2px 18px rgba(139, 92, 246, 0.35);
+    0 1px 0 rgba(0,0,0,0.9),
+    0 0 14px rgba(0,0,0,0.75),
+    0 2px 18px rgba(139, 92, 246, 0.4);
   text-transform: uppercase;
   pointer-events: none;
   animation: captionPop 0.55s var(--ease) both;
+  -webkit-line-clamp: 4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .clip-card.style-story .thumb-caption {
@@ -1593,7 +1665,8 @@ section { padding: 5rem 0; }
   background: var(--text-dim);
 }
 
-.clip-meta .style-chip {
+.clip-meta .aspect-label { color: var(--text-muted); }
+.style-chip {
   text-transform: uppercase;
   font-size: 0.65rem;
   font-weight: 700;
@@ -1760,7 +1833,7 @@ section { padding: 5rem 0; }
   .features { grid-template-columns: 1fr; }
   .pricing-strip { grid-template-columns: 1fr; }
   .clips-grid { grid-template-columns: 1fr; }
-  .clip-thumb { max-height: 340px; }
+  .clip-phone { width: min(100%, 240px); }
   .nav-links .hide-sm { display: none; }
   .url-row { flex-direction: column; }
   .url-row .btn { width: 100%; }
@@ -2206,18 +2279,21 @@ section { padding: 5rem 0; }
   gap: 0.45rem;
 }
 
-/* Aspect ratio chrome (UI only) */
+/* Aspect ratio chrome — phone frame keeps true ratio (no max-height squash) */
+.clips-grid.aspect-9-16 .clip-phone { width: min(100%, 220px); }
 .clips-grid.aspect-9-16 .clip-thumb {
   aspect-ratio: 9 / 16;
-  max-height: 300px;
+  max-height: none;
 }
+.clips-grid.aspect-1-1 .clip-phone { width: min(100%, 240px); }
 .clips-grid.aspect-1-1 .clip-thumb {
   aspect-ratio: 1 / 1;
-  max-height: 260px;
+  max-height: none;
 }
+.clips-grid.aspect-16-9 .clip-phone { width: min(100%, 320px); padding: 8px; }
 .clips-grid.aspect-16-9 .clip-thumb {
   aspect-ratio: 16 / 9;
-  max-height: 180px;
+  max-height: none;
 }
 .clips-grid.aspect-16-9 {
   grid-template-columns: 1fr;
@@ -2891,7 +2967,7 @@ body.void-mode-on .clip-card.has-resonance-emphasis {
   .control-group { min-width: 100%; }
   .segmented .seg-btn { flex: 1; justify-content: center; font-size: 0.78rem; padding: 0.4rem 0.5rem; }
   .nav-user .user-name { max-width: 72px; }
-  .clips-grid.aspect-9-16 .clip-thumb { max-height: 320px; }
+  .clips-grid.aspect-9-16 .clip-phone { width: min(100%, 230px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3941,6 +4017,7 @@ button[aria-busy="true"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .clip-thumb .thumb-source,
   .clip-thumb .thumb-motion,
   .thumb-caption,
   .thumb-progress-fill,
