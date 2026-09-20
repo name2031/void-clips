@@ -28,29 +28,47 @@ export default function Login() {
 
   return (
     <div className="auth-page">
+      <div className="landing-orb landing-orb-a" aria-hidden />
+      <div className="landing-noise" aria-hidden />
       <form className="auth-card" onSubmit={onSubmit}>
-        <div className="logo" style={{ marginBottom: '1.25rem' }}>
+        <Link to="/" className="logo logo-mark" style={{ marginBottom: '1.5rem', display: 'inline-block' }}>
           VOID <span>AI</span>
-        </div>
+        </Link>
         <h1>Welcome back</h1>
-        <p className="sub">Log in to continue your workspace.</p>
+        <p className="sub">Return to your workspace. Pick up where the signal left off.</p>
         {error && <div className="auth-error">{error}</div>}
         <div className="field">
-          <label>Email</label>
-          <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="you@domain.com"
+          />
         </div>
         <div className="field">
-          <label>Password</label>
+          <label htmlFor="login-password">Password</label>
           <input
+            id="login-password"
             type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            placeholder="••••••••"
           />
         </div>
         <button className="btn btn-primary" style={{ width: '100%' }} disabled={busy}>
-          {busy ? 'Signing in…' : 'Log in'}
+          {busy ? (
+            <>
+              <span className="spinner" /> Signing in…
+            </>
+          ) : (
+            'Log in'
+          )}
         </button>
         <p className="auth-footer">
           No account? <Link to="/signup">Sign up</Link>

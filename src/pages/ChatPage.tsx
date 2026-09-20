@@ -4,13 +4,13 @@ import { api, streamChat } from '../lib/api';
 import MessageBubble, { Msg } from '../components/MessageBubble';
 
 const CHIPS = [
-  { label: 'Build', prompt: 'Help me build ' },
-  { label: 'Analyze', prompt: 'Analyze this: ' },
-  { label: 'Create', prompt: 'Create ' },
-  { label: 'Research', prompt: 'Research ' },
-  { label: 'Write', prompt: 'Write ' },
-  { label: 'Code', prompt: 'Write code for ' },
-  { label: 'Plan', prompt: 'Make a plan for ' },
+  { label: 'Build', prompt: 'Help me build ', hint: 'Ship something concrete' },
+  { label: 'Analyze', prompt: 'Analyze this: ', hint: 'Cut through noise' },
+  { label: 'Create', prompt: 'Create ', hint: 'Make from nothing' },
+  { label: 'Research', prompt: 'Research ', hint: 'Map the terrain' },
+  { label: 'Write', prompt: 'Write ', hint: 'Words that land' },
+  { label: 'Code', prompt: 'Write code for ', hint: 'Implementation-ready' },
+  { label: 'Plan', prompt: 'Make a plan for ', hint: 'Sequence the work' },
 ];
 
 type OutletCtx = { refreshConvs: () => void; newChat: () => void };
@@ -63,10 +63,7 @@ export default function ChatPage() {
           pendingSummarize.current = null;
           const content = `Summarize this file and extract the key points: ${pending.name}`;
           const optimistic: Msg = { id: 'temp-' + Date.now(), role: 'user', content };
-          runStreamRef.current(
-            { content, file_id: pending.fileId, conversation_id: id },
-            optimistic
-          );
+          runStreamRef.current({ content, file_id: pending.fileId, conversation_id: id }, optimistic);
         })
         .catch(() => nav('/app'));
     } else {
@@ -119,16 +116,12 @@ export default function ChatPage() {
         {
           onToken: (t) => {
             acc += t;
-            setMessages((m) =>
-              m.map((x) => (x.id === assistantId ? { ...x, content: acc } : x))
-            );
+            setMessages((m) => m.map((x) => (x.id === assistantId ? { ...x, content: acc } : x)));
           },
           onDone: (messageId) => {
             setMessages((m) =>
               m.map((x) =>
-                x.id === assistantId
-                  ? { ...x, id: messageId || x.id, streaming: false, content: acc }
-                  : x
+                x.id === assistantId ? { ...x, id: messageId || x.id, streaming: false, content: acc } : x
               )
             );
             refreshConvs();
@@ -137,9 +130,7 @@ export default function ChatPage() {
             if (!acc) {
               setMessages((m) =>
                 m.map((x) =>
-                  x.id === assistantId
-                    ? { ...x, content: `Error: ${err}`, streaming: false }
-                    : x
+                  x.id === assistantId ? { ...x, content: `Error: ${err}`, streaming: false } : x
                 )
               );
             }
@@ -164,7 +155,6 @@ export default function ChatPage() {
     } finally {
       setStreaming(false);
       abortRef.current = null;
-      // reload for consistent IDs
       if (cid) {
         try {
           await load(cid);
@@ -223,12 +213,23 @@ export default function ChatPage() {
         <div className="chat-inner">
           {!messages.length && (
             <div className="empty-chat">
-              <h2>VOID AI</h2>
-              <p>Tell it what you need. Let it handle the rest.</p>
+              <div className="empty-orb" aria-hidden />
+              <p className="empty-kicker">Workspace</p>
+              <h2>What should VOID handle?</h2>
+              <p className="empty-sub">Tell it what you need. Let it handle the rest.</p>
               <div className="chips">
                 {CHIPS.map((c) => (
-                  <button key={c.label} className="chip" onClick={() => setInput(c.prompt)}>
-                    {c.label}
+                  <button
+                    key={c.label}
+                    className="chip"
+                    title={c.hint}
+                    onClick={() => {
+                      setInput(c.prompt);
+                      taRef.current?.focus();
+                    }}
+                  >
+                    <span className="chip-label">{c.label}</span>
+                    <span className="chip-hint">{c.hint}</span>
                   </button>
                 ))}
               </div>
@@ -251,14 +252,26 @@ export default function ChatPage() {
 
       <div className="composer-wrap">
         {editingId && (
-          <div style={{ maxWidth: 760, margin: '0 auto 0.5rem', fontSize: '0.8rem', color: 'var(--accent)' }}>
-            Editing message — send to replace{' '}
-            <button className="btn btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => { setEditingId(null); setInput(''); }}>
+          <div className="edit-banner">
+            Editing message — send to replace
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setEditingId(null);
+                setInput('');
+              }}
+            >
               Cancel
             </button>
           </div>
         )}
-        <div className="composer">
+        {streaming && (
+          <div className="stream-banner">
+            <span className="stream-pulse" />
+            VOID is responding…
+          </div>
+        )}
+        <div className={`composer${streaming ? ' is-streaming' : ''}`}>
           <textarea
             ref={taRef}
             rows={1}
@@ -271,7 +284,6 @@ export default function ChatPage() {
                 send();
               }
             }}
-            disabled={streaming && !editingId ? false : false}
           />
           {streaming ? (
             <button className="btn btn-secondary" onClick={stop}>
@@ -283,6 +295,7 @@ export default function ChatPage() {
             </button>
           )}
         </div>
+        <p className="composer-hint">Enter to send · Shift+Enter for newline</p>
       </div>
     </>
   );

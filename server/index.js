@@ -26,6 +26,8 @@ const app = express();
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
 
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: true,
@@ -54,14 +56,24 @@ app.use('/api/memories', memoryRoutes);
 app.use('/api/settings', settingsRoutes);
 
 if (fs.existsSync(dist)) {
-  app.use(express.static(dist));
+  app.use(
+    express.static(dist, {
+      index: false,
+      maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+    })
+  );
+  // SPA fallback for client routes (not /api/*)
   app.get('*', (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(dist, 'index.html'));
+    if (req.path.startsWith('/uploads')) return next();
+    const indexHtml = path.join(dist, 'index.html');
+    if (!fs.existsSync(indexHtml)) return next();
+    res.sendFile(indexHtml);
   });
 } else {
   app.get('/', (_req, res) => {
-    res.type('html').send(`<!doctype html><html><body style="background:#0a0a0c;color:#e8e8ed;font-family:system-ui;padding:2rem">
+    res.type('html').send(`<!doctype html><html><body style="background:#050508;color:#e8e8ed;font-family:system-ui;padding:2rem">
       <h1>VOID AI</h1>
       <p>Frontend not built yet. Run <code>npm run build</code> or <code>npm run dev</code>.</p>
       <p><a href="/api/health" style="color:#8b9cff">/api/health</a></p>

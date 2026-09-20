@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { NavLink, Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 type Conv = { id: string; title: string; updated_at: string };
 
 export default function AppLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [convs, setConvs] = useState<Conv[]>([]);
   const [q, setQ] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -78,11 +78,11 @@ export default function AppLayout() {
       />
       <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="sidebar-header">
-          <div className="logo">
+          <Link to="/" className="logo logo-mark">
             VOID <span>AI</span>
-          </div>
-          <button className="btn btn-secondary" style={{ padding: '0.4rem 0.7rem', fontSize: '0.8rem' }} onClick={newChat}>
-            New
+          </Link>
+          <button className="btn btn-secondary btn-sm" onClick={newChat} title="New chat">
+            + New
           </button>
         </div>
         <nav className="sidebar-nav">
@@ -92,22 +92,51 @@ export default function AppLayout() {
             end
             onClick={() => setSidebarOpen(false)}
           >
+            <span className="side-ico" aria-hidden>
+              ⌁
+            </span>
             Chat
           </NavLink>
-          <NavLink className={({ isActive }) => `side-link${isActive ? ' active' : ''}`} to="/app/projects" onClick={() => setSidebarOpen(false)}>
+          <NavLink
+            className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}
+            to="/app/projects"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="side-ico" aria-hidden>
+              ◈
+            </span>
             Projects
           </NavLink>
-          <NavLink className={({ isActive }) => `side-link${isActive ? ' active' : ''}`} to="/app/files" onClick={() => setSidebarOpen(false)}>
+          <NavLink
+            className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}
+            to="/app/files"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="side-ico" aria-hidden>
+              ▣
+            </span>
             Files
           </NavLink>
-          <NavLink className={({ isActive }) => `side-link${isActive ? ' active' : ''}`} to="/app/settings" onClick={() => setSidebarOpen(false)}>
+          <NavLink
+            className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}
+            to="/app/settings"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="side-ico" aria-hidden>
+              ◎
+            </span>
             Settings
           </NavLink>
         </nav>
         <div className="side-section">
           <div className="side-label">Recent</div>
           <div className="search-box">
-            <input placeholder="Search conversations…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input
+              placeholder="Search conversations…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Search conversations"
+            />
           </div>
           {convs.map((c) => (
             <div
@@ -130,22 +159,41 @@ export default function AppLayout() {
             </div>
           ))}
           {!convs.length && (
-            <div style={{ padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>No conversations yet</div>
+            <div className="empty-side">
+              <p>No conversations yet</p>
+              <button className="btn btn-ghost btn-sm" onClick={newChat}>
+                Start one
+              </button>
+            </div>
           )}
         </div>
-        <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid var(--border-soft)', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-          {user?.email}
+        <div className="sidebar-footer">
+          <span className="sidebar-email" title={user?.email}>
+            {user?.email}
+          </span>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={async () => {
+              await logout();
+              nav('/');
+            }}
+          >
+            Log out
+          </button>
         </div>
       </aside>
 
       <div className="main">
         <div className="topbar">
-          <button className="btn btn-ghost" onClick={() => setSidebarOpen(true)}>
+          <button className="btn btn-ghost" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
             ☰
           </button>
-          <div className="logo">
+          <div className="logo logo-mark">
             VOID <span>AI</span>
           </div>
+          <button className="btn btn-secondary btn-sm" onClick={newChat}>
+            + New
+          </button>
         </div>
         <Outlet context={{ refreshConvs: loadConvs, newChat }} />
       </div>

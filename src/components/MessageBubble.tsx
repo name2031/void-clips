@@ -29,30 +29,41 @@ export default function MessageBubble({
   if (msg.role === 'system') return null;
   return (
     <div className={`msg ${msg.role}${msg.streaming ? ' streaming' : ''}`}>
-      <div className="msg-avatar">{msg.role === 'assistant' ? 'V' : 'U'}</div>
+      <div className="msg-avatar" aria-hidden>
+        {msg.role === 'assistant' ? 'V' : 'U'}
+      </div>
       <div className="msg-body">
         <div className="msg-role">{msg.role === 'assistant' ? 'VOID' : 'You'}</div>
         <div className="msg-content">
           {msg.role === 'assistant' ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-              {msg.content || (msg.streaming ? '▍' : '')}
-            </ReactMarkdown>
+            <>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                {msg.content || ''}
+              </ReactMarkdown>
+              {msg.streaming && <span className="stream-caret" aria-hidden />}
+              {msg.streaming && !msg.content && (
+                <span className="thinking">
+                  <span className="thinking-dot" />
+                  <span className="thinking-dot" />
+                  <span className="thinking-dot" />
+                </span>
+              )}
+            </>
           ) : (
             <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{msg.content}</p>
           )}
-          {msg.streaming && !msg.content && <span className="spinner" />}
         </div>
         <div className="msg-actions">
-          <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={onCopy}>
+          <button className="btn btn-ghost btn-sm" onClick={onCopy}>
             Copy
           </button>
           {isLastUser && onEdit && (
-            <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={onEdit}>
+            <button className="btn btn-ghost btn-sm" onClick={onEdit}>
               Edit
             </button>
           )}
           {isLastAssistant && onRegenerate && (
-            <button className="btn btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={onRegenerate}>
+            <button className="btn btn-ghost btn-sm" onClick={onRegenerate}>
               Regenerate
             </button>
           )}

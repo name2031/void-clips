@@ -12,11 +12,20 @@ import {
 
 const router = Router();
 
+function cookieSecure() {
+  if (process.env.COOKIE_SECURE === 'true') return true;
+  if (process.env.COOKIE_SECURE === 'false') return false;
+  const base = (process.env.PUBLIC_BASE || process.env.RAILWAY_PUBLIC_DOMAIN || '').toLowerCase();
+  if (base.startsWith('https://') || base.startsWith('https:')) return true;
+  if (process.env.NODE_ENV === 'production') return true;
+  return false;
+}
+
 function setSessionCookie(res, token, expiresAt) {
   res.cookie('void_session', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     expires: new Date(expiresAt),
     path: '/',
   });
@@ -65,7 +74,12 @@ router.post('/login', (req, res) => {
 
 router.post('/logout', (req, res) => {
   destroySession(extractToken(req));
-  res.clearCookie('void_session', { path: '/' });
+  res.clearCookie('void_session', {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: cookieSecure(),
+  });
   res.json({ ok: true });
 });
 

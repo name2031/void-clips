@@ -1,15 +1,18 @@
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-20b';
+const GROQ_FALLBACK_MODELS = ['openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
 
 export function getAiConfig() {
   const groqKey = process.env.GROQ_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL;
+  const envModel = process.env.OPENAI_MODEL?.trim();
 
   if (openaiKey) {
     return {
       apiKey: openaiKey,
       baseUrl: (baseUrl || 'https://api.openai.com/v1').replace(/\/$/, ''),
-      model: DEFAULT_MODEL,
+      model: envModel || OPENAI_DEFAULT_MODEL,
       provider: 'openai',
     };
   }
@@ -17,7 +20,7 @@ export function getAiConfig() {
     return {
       apiKey: groqKey,
       baseUrl: (baseUrl || 'https://api.groq.com/openai/v1').replace(/\/$/, ''),
-      model: process.env.OPENAI_MODEL || 'llama-3.3-70b-versatile',
+      model: envModel || GROQ_DEFAULT_MODEL,
       provider: 'groq',
     };
   }
@@ -70,6 +73,34 @@ export function buildSystemPrompt({ settings, memories, project, toolsDescriptio
   return parts.join('\n\n');
 }
 
+async function requestCompletion(cfg, messages, signal, model) {
+  return fetch(`${cfg.baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: true,
+      temperature: 0.7,
+    }),
+    signal,
+  });
+}
+
+function isModelNotFound(status, text) {
+  if (status !== 404) return false;
+  const lower = (text || '').toLowerCase();
+  return (
+    lower.includes('does not exist') ||
+    lower.includes('model_not_found') ||
+    lower.includes('not found') ||
+    lower.includes('invalid_model')
+  );
+}
+
 export async function streamChatCompletion({ messages, signal }) {
   const cfg = getAiConfig();
   if (!cfg) {
@@ -78,29 +109,40 @@ export async function streamChatCompletion({ messages, signal }) {
     throw err;
   }
 
-  const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${cfg.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: cfg.model,
-      messages,
-      stream: true,
-      temperature: 0.7,
-    }),
-    signal,
-  });
+  const tried = new Set();
+  const candidates = [cfg.model];
+  if (cfg.provider === 'groq') {
+    for (const m of GROQ_FALLBACK_MODELS) {
+      if (!candidates.includes(m)) candidates.push(m);
+    }
+  }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    const err = new Error(`AI provider error (${res.status}): ${text.slice(0, 400)}`);
+  let lastStatus = 0;
+  let lastText = '';
+
+  for (const model of candidates) {
+    if (tried.has(model)) continue;
+    tried.add(model);
+
+    const res = await requestCompletion(cfg, messages, signal, model);
+    if (res.ok) return res.body;
+
+    lastText = await res.text().catch(() => '');
+    lastStatus = res.status;
+
+    if (cfg.provider === 'groq' && isModelNotFound(res.status, lastText)) {
+      console.warn(`[VOID AI] Model ${model} unavailable (${res.status}); trying fallback…`);
+      continue;
+    }
+
+    const err = new Error(`AI provider error (${res.status}): ${lastText.slice(0, 400)}`);
     err.code = 'PROVIDER_ERROR';
     throw err;
   }
 
-  return res.body;
+  const err = new Error(`AI provider error (${lastStatus}): ${lastText.slice(0, 400)}`);
+  err.code = 'PROVIDER_ERROR';
+  throw err;
 }
 
 export async function* parseSSEStream(body) {

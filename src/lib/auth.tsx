@@ -19,16 +19,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!getToken()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     try {
+      // Cookie session and/or Bearer token (api attaches Bearer when present)
       const data = await api<{ user: User }>('/api/auth/me');
       setUser(data.user);
     } catch {
-      setToken(null);
+      if (getToken()) setToken(null);
       setUser(null);
     } finally {
       setLoading(false);
