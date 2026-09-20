@@ -275,6 +275,8 @@
   var SITE_CONFIG_CACHE_KEY = "void_clips_site_config_cache";
   var MAX_HISTORY = 5;
   var FREE_CREDITS = 10;
+  var GUEST_FREE_CREDITS = 3;
+  var GUEST_CREDITS_KEY = "void_clips_guest_credits";
   var OWNER_EMAIL = "yuel.zeru2000@gmail.com";
   var MIN_PASSWORD = 10;
   var MAX_PASSWORD_FAILS = 5;
@@ -324,6 +326,11 @@
   var navCredits = document.getElementById("nav-credits");
   var creditsPill = document.getElementById("credits-pill");
   var navUser = document.getElementById("nav-user");
+  var navGuestAuth = document.getElementById("nav-guest-auth");
+  var navSigninBtn = document.getElementById("nav-signin-btn");
+  var guestBanner = document.getElementById("guest-banner");
+  var guestBannerSignin = document.getElementById("guest-banner-signin");
+  var authContinueGuest = document.getElementById("auth-continue-guest");
   var userNameEl = document.getElementById("user-name");
   var signOutBtn = document.getElementById("sign-out-btn");
   var upgradeCta = document.getElementById("upgrade-cta");
@@ -513,6 +520,37 @@
     return !!(currentUser && currentUser.verified && isOwnerEmail(currentUser.email || currentUser.identity));
   }
 
+  function isSignedIn() {
+    return !!(currentUser && currentUser.verified);
+  }
+
+  function getGuestCredits() {
+    try {
+      var n = Number(localStorage.getItem(GUEST_CREDITS_KEY));
+      if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+    } catch (e) {}
+    return GUEST_FREE_CREDITS;
+  }
+
+  function setGuestCredits(n) {
+    n = Math.max(0, Math.floor(Number(n) || 0));
+    try {
+      localStorage.setItem(GUEST_CREDITS_KEY, String(n));
+    } catch (e) {}
+    return n;
+  }
+
+  function ensureGuestCredits() {
+    try {
+      if (localStorage.getItem(GUEST_CREDITS_KEY) === null) {
+        setGuestCredits(GUEST_FREE_CREDITS);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return getGuestCredits();
+  }
+
   function syncOwnerVisibility() {
     var owner = isOwner();
     try {
@@ -636,10 +674,15 @@
         });
       })
       .then(function (data) {
-        if (data && data.ok) applyRemoteSiteConfig(data, true);
+        if (data && data.ok) {
+          applyRemoteSiteConfig(data, true);
+          return data;
+        }
+        showToast((data && data.error) || "Site config save failed — local only");
         return data;
       })
       .catch(function () {
+        showToast("Site config unreachable — saved locally only");
         return null;
       });
   }
@@ -1118,7 +1161,7 @@
     return fetch("/api/owner/grant-pro", {
       method: "POST",
       headers: ownerApiHeaders(),
-      body: JSON.stringify({ email: email, days: days }),
+      body: JSON.stringify({ email: email, days: Number(days) }),
     })
       .then(function (r) {
         return r
@@ -1367,7 +1410,7 @@
     }
     if (ownerMaintStatus) ownerMaintStatus.textContent = on ? "On" : "Off";
 
-    if (on && signedIn && !owner) {
+    if (on && !owner) {
       if (maintenanceOverlay) maintenanceOverlay.hidden = false;
       if (appMain) appMain.hidden = true;
       if (authGate) authGate.hidden = true;
@@ -1375,19 +1418,23 @@
       if (navCredits) navCredits.hidden = true;
       if (navUser) navUser.hidden = true;
       if (navProBadge) navProBadge.hidden = true;
+      if (navGuestAuth) navGuestAuth.hidden = true;
+      if (guestBanner) guestBanner.hidden = true;
       syncOwnerVisibility();
       return;
     }
 
     if (maintenanceOverlay) maintenanceOverlay.hidden = true;
 
-    if (signedIn && owner) {
-      if (authGate) authGate.hidden = true;
+    if (signedIn) {
+      if (authGate) {
+        authGate.hidden = true;
+        authGate.classList.remove("is-modal");
+      }
       if (appMain && (!ownerPanel || ownerPanel.hidden)) appMain.hidden = false;
       updateCreditsUI();
-    } else if (signedIn) {
-      if (authGate) authGate.hidden = true;
-      if (appMain && (!ownerPanel || ownerPanel.hidden)) appMain.hidden = false;
+    } else if (!ownerPanel || ownerPanel.hidden) {
+      /* Guests keep studio when maintenance is off */
       updateCreditsUI();
     }
   }
@@ -1403,14 +1450,38 @@
   }
 
   function updateCreditsUI() {
-    if (!currentUser || !currentUser.verified) {
-      if (navCredits) navCredits.hidden = true;
+    if (!isSignedIn()) {
+      ensureGuestCredits();
+      var g = getGuestCredits();
+      if (navGuestAuth) navGuestAuth.hidden = false;
+      if (navCredits) navCredits.hidden = false;
+      if (creditsPill) {
+        creditsPill.textContent = g <= 0 ? "0 guest left" : g + " guest left";
+        creditsPill.classList.toggle("credits-empty", g <= 0);
+        creditsPill.classList.remove("credits-owner", "credits-pro");
+        creditsPill.title = "Guest demo generations left — sign in for 10 free gens";
+      }
       if (navUser) navUser.hidden = true;
       if (navProBadge) navProBadge.hidden = true;
+      if (guestBanner) guestBanner.hidden = false;
+      if (guestBannerSignin) { /* keep */ }
+      var blockedMaint = isMaintenanceOn();
+      if (generateBtn) {
+        generateBtn.disabled = g <= 0 || blockedMaint;
+        generateBtn.title = blockedMaint
+          ? "App is in maintenance mode"
+          : g <= 0
+            ? "Guest demos used up — sign in for 10 free gens"
+            : "Generate demo clips as guest";
+        generateBtn.classList.toggle("is-blocked", g <= 0 || blockedMaint);
+      }
+      if (upgradeCta) upgradeCta.hidden = true;
       syncOwnerVisibility();
       applyFeatureFlagsUI();
       return;
     }
+    if (navGuestAuth) navGuestAuth.hidden = true;
+    if (guestBanner) guestBanner.hidden = true;
     /* refresh entitlement flags */
     applyEntitlementToUser(currentUser, getAccount(currentUser.email));
 
@@ -1465,17 +1536,47 @@
     maybeShowOnboarding();
   }
 
-  function showAuthGate() {
+  function showGuestStudio() {
+    if (isMaintenanceOn() && !isOwner()) {
+      applyMaintenanceUI();
+      return;
+    }
+    if (authGate) {
+      authGate.hidden = true;
+      authGate.classList.remove("is-modal");
+    }
+    if (ownerPanel) ownerPanel.hidden = true;
+    if (appMain) appMain.hidden = false;
+    if (onboardingModal) onboardingModal.hidden = true;
+    ensureGuestCredits();
+    updateCreditsUI();
+    applyMaintenanceUI();
+    syncOwnerVisibility();
+  }
+
+  function showAuthGate(opts) {
+    opts = opts || {};
+    var soft = !!opts.soft;
     if (maintenanceOverlay) maintenanceOverlay.hidden = true;
     if (ownerPanel) ownerPanel.hidden = true;
-    if (authGate) authGate.hidden = false;
-    if (appMain) appMain.hidden = true;
-    if (navCredits) navCredits.hidden = true;
-    if (navUser) navUser.hidden = true;
-    if (navProBadge) navProBadge.hidden = true;
+    if (authGate) {
+      authGate.hidden = false;
+      authGate.classList.toggle("is-modal", soft);
+    }
+    /* Soft: keep studio under the modal. Hard: full-page wall (rare). */
+    if (appMain) appMain.hidden = soft ? false : true;
+    if (!soft) {
+      if (navCredits) navCredits.hidden = true;
+      if (navUser) navUser.hidden = true;
+      if (navProBadge) navProBadge.hidden = true;
+      if (navGuestAuth) navGuestAuth.hidden = true;
+    } else {
+      updateCreditsUI();
+    }
     syncOwnerVisibility();
     if (onboardingModal) onboardingModal.hidden = true;
     showSignInPanel();
+    if (authContinueGuest) authContinueGuest.hidden = false;
     if (authIdentity) {
       setTimeout(function () {
         authIdentity.focus();
@@ -1494,7 +1595,7 @@
     if (authTitle) authTitle.textContent = "Welcome to VOID";
     if (authSub) {
       authSub.innerHTML =
-        'Sign in or create an account. <strong>Strong password</strong> · email verify required · 10 free gens.';
+        'Sign in for <strong>10 free gens</strong> + save history — or continue as guest to try the demo.';
     }
     if (authError) {
       authError.hidden = true;
@@ -2372,8 +2473,8 @@
     clearPendingVerify();
     if (settingsModal) closeModal(settingsModal);
     if (ownerPanel) ownerPanel.hidden = true;
-    showAuthGate();
-    showToast("Local session reset — sign in again");
+    showGuestStudio();
+    showToast("Local session reset — guest demo available");
   }
 
   function signOut() {
@@ -2388,21 +2489,26 @@
     setEmptyVisible(true);
     if (navProBadge) navProBadge.hidden = true;
     syncOwnerVisibility();
-    showAuthGate();
-    applyMaintenanceUI();
+    showGuestStudio();
     applyFeatureFlagsUI();
-    showToast("Signed out");
+    showToast("Signed out — guest demo available");
   }
 
   function consumeCredit() {
-    if (!currentUser) return false;
-    if (isOwner() || isPro()) {
+    if (isSignedIn()) {
+      if (isOwner() || isPro()) {
+        updateCreditsUI();
+        return true;
+      }
+      if (currentUser.credits <= 0) return false;
+      currentUser.credits -= 1;
+      saveUser(currentUser);
       updateCreditsUI();
       return true;
     }
-    if (currentUser.credits <= 0) return false;
-    currentUser.credits -= 1;
-    saveUser(currentUser);
+    var g = getGuestCredits();
+    if (g <= 0) return false;
+    setGuestCredits(g - 1);
     updateCreditsUI();
     return true;
   }
@@ -2998,9 +3104,12 @@
 
   function closeOwnerPanel() {
     if (ownerPanel) ownerPanel.hidden = true;
-    if (currentUser && currentUser.verified) {
+    if (isSignedIn()) {
       if (appMain) appMain.hidden = false;
       applyMaintenanceUI();
+      updateCreditsUI();
+    } else {
+      showGuestStudio();
     }
   }
 
@@ -3706,11 +3815,12 @@
       e.preventDefault();
       if (!isOwner()) return;
       var email = proGrantEmail && proGrantEmail.value;
-      var days = proGrantDays && proGrantDays.value;
+      var days = Math.max(1, Math.min(3650, Math.floor(Number(proGrantDays && proGrantDays.value) || 30)));
       if (!email) {
         showToast("Enter an email");
         return;
       }
+      showToast("Granting Pro…");
       ownerGrantPro(email, days).then(function (result) {
         if (result.server) {
           showToast(
@@ -3736,6 +3846,7 @@
         return;
       }
       if (!confirm("Revoke Pro for " + normalizeEmail(email) + "?")) return;
+      showToast("Revoking Pro…");
       ownerRevokePro(email).then(function (result) {
         if (result.server) {
           showToast("Pro revoked for " + result.email);
@@ -3874,8 +3985,7 @@
       if (resultsEl) resultsEl.classList.remove("active");
       setEmptyVisible(true);
       closeOwnerPanel();
-      showAuthGate();
-      applyMaintenanceUI();
+      showGuestStudio();
       showToast("All users data cleared (local)");
     });
   }
@@ -5020,16 +5130,19 @@
   }
 
   function generate() {
-    if (!currentUser || !currentUser.verified) {
-      showAuthGate();
-      return;
-    }
     if (isMaintenanceOn() && !isOwner()) {
       applyMaintenanceUI();
       showToast("VOID Clips is updating — back soon");
       return;
     }
-    if (!isOwner() && !isPro() && currentUser.credits <= 0) {
+    if (!isSignedIn()) {
+      ensureGuestCredits();
+      if (getGuestCredits() <= 0) {
+        showAuthGate({ soft: true });
+        showToast("Guest demos used up — sign in for 10 free gens");
+        return;
+      }
+    } else if (!isOwner() && !isPro() && currentUser.credits <= 0) {
       updateCreditsUI();
       if (upgradeCta) {
         upgradeCta.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -5074,8 +5187,15 @@
         showToast("∞ / Owner");
       } else if (isPro()) {
         showToast("∞ / Pro");
-      } else if (currentUser && currentUser.credits > 0) {
+      } else if (isSignedIn() && currentUser && currentUser.credits > 0) {
         showToast(creditsLabel(currentUser.credits));
+      } else if (!isSignedIn()) {
+        var left = getGuestCredits();
+        showToast(
+          left > 0
+            ? left + " guest demo" + (left === 1 ? "" : "s") + " left"
+            : "Guest demos done — sign in for 10 free"
+        );
       } else {
         showToast("Out of free gens — upgrade or redeem a code");
       }
@@ -5083,6 +5203,18 @@
   }
 
   if (generateBtn) generateBtn.addEventListener("click", generate);
+
+  function openSoftAuth() {
+    showAuthGate({ soft: true });
+  }
+  if (navSigninBtn) navSigninBtn.addEventListener("click", openSoftAuth);
+  if (guestBannerSignin) guestBannerSignin.addEventListener("click", openSoftAuth);
+  if (authContinueGuest) {
+    authContinueGuest.addEventListener("click", function () {
+      showGuestStudio();
+      showToast("Guest demo — " + getGuestCredits() + " free try" + (getGuestCredits() === 1 ? "" : "s"));
+    });
+  }
 
   var regenerateBtn = document.getElementById("regenerate-btn");
   if (regenerateBtn) {
@@ -6526,9 +6658,11 @@
   }
 
   function creditsRemaining() {
-    if (!currentUser) return 0;
-    if (isOwner() || isPro()) return Infinity;
-    return typeof currentUser.credits === "number" ? currentUser.credits : 0;
+    if (isSignedIn()) {
+      if (isOwner() || isPro()) return Infinity;
+      return typeof currentUser.credits === "number" ? currentUser.credits : 0;
+    }
+    return getGuestCredits();
   }
 
   function finishGeneration(url, clips) {
@@ -6669,14 +6803,23 @@
       showToast("Paste at least one valid link");
       return;
     }
-    if (!currentUser || !currentUser.verified) {
-      showAuthGate();
-      return;
+    if (!isSignedIn()) {
+      ensureGuestCredits();
+      if (getGuestCredits() <= 0) {
+        showAuthGate({ soft: true });
+        showToast("Guest demos used up — sign in for 10 free gens");
+        return;
+      }
     }
     var remain = creditsRemaining();
     if (!isOwner() && !isPro() && remain <= 0) {
       updateCreditsUI();
-      showToast("No free generations left");
+      if (!isSignedIn()) {
+        showAuthGate({ soft: true });
+        showToast("Guest demos used up — sign in for 10 free gens");
+      } else {
+        showToast("No free generations left");
+      }
       return;
     }
     var maxN = isOwner() || isPro() ? urls.length : Math.min(urls.length, remain);
@@ -6911,7 +7054,7 @@
     syncServerEntitlement(currentUser.email);
   } else {
     currentUser = null;
-    showAuthGate();
+    showGuestStudio();
   }
   syncOwnerAdminPanel();
 

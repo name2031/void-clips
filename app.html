@@ -80,6 +80,9 @@
           </button>
           <button type="button" id="sign-out-btn" class="sign-out-link">Sign out</button>
         </li>
+        <li id="nav-guest-auth" class="nav-guest-auth" hidden>
+          <button type="button" id="nav-signin-btn" class="btn btn-primary btn-sm-nav">Sign in</button>
+        </li>
         <li><a href="index.html">Home</a></li>
         <li>
           <a href="https://www.tiktok.com/@V_O_I_.D" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm-nav">@V_O_I_.D</a>
@@ -97,7 +100,8 @@
         </span>
       </div>
       <h1 id="auth-title">Welcome to VOID</h1>
-      <p class="auth-sub" id="auth-sub">Sign in or create an account. <strong>Strong password</strong> · email verify required · 10 free gens.</p>
+      <p class="auth-sub" id="auth-sub">Sign in for <strong>10 free gens</strong> + save history — or continue as guest to try the demo.</p>
+      <button type="button" id="auth-continue-guest" class="btn btn-ghost btn-block auth-continue-guest">Continue as guest · try demo</button>
 
       <div id="auth-signin-panel">
         <div class="auth-tabs" role="tablist" aria-label="Account">
@@ -269,6 +273,10 @@
 
   <main id="app-main" class="container app-wrap" hidden>
     <div class="app-header">
+      <div id="guest-banner" class="guest-banner" hidden role="status">
+        <span id="guest-banner-text">Trying as guest — paste a link &amp; Generate. Sign in for 10 free gens &amp; saved history.</span>
+        <button type="button" id="guest-banner-signin" class="btn btn-ghost btn-sm">Sign in</button>
+      </div>
       <div class="app-header-top">
         <div class="demo-badge" title="No live video processing — preview UX only">● DEMO MODE</div>
         <div class="studio-quick">
@@ -712,7 +720,7 @@
 
         <section class="owner-card">
           <h2>Gift / redeem codes</h2>
-          <p class="settings-hint">Create codes with duration + max uses. <strong>Disable</strong> stops new redemptions.</p>
+          <p class="settings-hint">Create codes with duration + max uses. <strong>Disable</strong> stops new redemptions. <strong>This browser only</strong> (localStorage) — not a global server DB.</p>
           <form id="gift-code-form" class="owner-form">
             <label class="input-label" for="gift-code-custom">Code (blank = random)</label>
             <input id="gift-code-custom" class="auth-input" type="text" maxlength="32" placeholder="VOID-XXXX or leave blank" autocomplete="off" />
@@ -750,7 +758,7 @@
 
         <section class="owner-card">
           <h2>Force credits</h2>
-          <p class="settings-hint">Set free gens remaining for an email (exact value). Add-only still available below.</p>
+          <p class="settings-hint">Set free gens for an email on <strong>this browser</strong> (localStorage accounts). Does not change other devices. Add-only still available below.</p>
           <form id="force-credits-form" class="owner-form">
             <label class="input-label" for="force-credits-email">User email</label>
             <input id="force-credits-email" class="auth-input" type="email" required placeholder="user@email.com" />
